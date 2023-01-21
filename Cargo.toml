@@ -1,0 +1,13 @@
+[package]
+name = "Taskmaster"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = "1.0"
+toml = "0.5"
+clap = "4.0"
+anyhow = "1.0"
+log = "0.4"
