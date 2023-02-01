@@ -1,14 +1,15 @@
-[package]
-name = "taskmaster"
+[workspace]
+members = ["taskmasterd", "taskmasterctl"]
+default-members = ["taskmasterd"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
+authors = [
+	"Tiago Lernould <tlernoul@student.42.fr>",
+	"Youva Gaudé <ygaude@student.42.fr>"
+]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-serde = "1.0"
-toml = "0.5"
+[workspace.dependencies]
 clap = "4.0"
 anyhow = "1.0"
-log = "0.4"
-signal-hook = "0.3.14"

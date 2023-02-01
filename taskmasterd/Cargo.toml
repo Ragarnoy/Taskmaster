@@ -1,0 +1,13 @@
+[package]
+name = "taskmasterd"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+serde = "1.0"
+toml = "0.5"
+log = "0.4"
+signal-hook = "0.3"
