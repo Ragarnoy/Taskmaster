@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 
-const SOCKET_PATH: &str = "/tmp/taskmaster.sock";
+const SOCKET_PATH: &str = "/tmp/taskmasterd/taskmasterd.sock";
 
 fn main() -> Result<()> {
     let message = std::env::args().skip(1).collect::<Vec<_>>().join(" ");
