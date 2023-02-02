@@ -13,24 +13,27 @@ fn main() -> Result<()> {
             .with_context(|| format!("could not delete previous socket at {:?}", SOCKET_PATH))?;
     }
     let unix_listener = UnixListener::bind(SOCKET_PATH)?;
+    unix_listener
+        .set_nonblocking(true)
+        .context("could not set non-blocking mode on socket")?;
     let term = Arc::new(AtomicBool::new(false));
     let mut response = String::new();
     signal_hook::flag::register(signal_hook::consts::SIGHUP, Arc::clone(&term))?;
     while !term.load(Ordering::Relaxed) {
-        let (mut stream, _) = unix_listener
-            .accept()
-            .context("Failed at accepting a connection on the unix listener")?;
-        stream
-            .read_to_string(&mut response)
-            .context("Failed at reading the request")?;
-        eprintln!("message: {}", response);
-        if response == "quit" {
-            break;
+        if let Ok((mut stream, _)) = unix_listener.accept() {
+            stream
+                .read_to_string(&mut response)
+                .context("Failed at reading the request")?;
+            eprintln!("message: {}", response);
+            stream
+                .write_all(b"ack")
+                .context("Failed at writing the response")?;
+            if response == "quit" {
+                break;
+            }
+            response.clear();
         }
-        stream
-            .write_all(b"ack")
-            .context("Failed at writing the response")?;
-        response.clear();
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
     Ok(())
 }
