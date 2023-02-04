@@ -1,10 +1,50 @@
 use anyhow::{Context, Result};
+use clap::*;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 
 const SOCKET_PATH: &str = "/tmp/taskmasterd/taskmasterd.sock";
 
+#[derive(Parser)]
+#[command(author, name = "taskmasterctl", about)]
+struct Args {
+    #[clap(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Parser)]
+enum Command {
+    /// Start processes
+    Start {
+        /// The name of the processes to start, or all if not specified
+        #[clap(name = "name")]
+        processes: Vec<String>,
+    },
+    /// Stop processes
+    Stop {
+        /// The name of the processes to stop, or all if not specified
+        #[clap(name = "name")]
+        processes: Vec<String>,
+    },
+    /// Restart processes
+    Restart {
+        /// The name of the processes to restart, or all if not specified
+        #[clap(name = "name")]
+        processes: Vec<String>,
+    },
+    /// Get the status of processes
+    Status {
+        /// The name of the processes to get the status of, or all if not specified
+        name: Vec<String>,
+    },
+    /// Reload the configuration
+    Reload,
+    /// Shutdown the daemon
+    Shutdown,
+}
+
 fn main() -> Result<()> {
+    let args = Args::parse();
     let message = std::env::args().skip(1).collect::<Vec<_>>().join(" ");
     if !message.is_empty() {
         let mut unix_stream =
