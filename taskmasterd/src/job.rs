@@ -11,17 +11,38 @@ pub mod process;
 const DEFAULT_CONFIG_PATHS: [&str; 3] =
     ["config.yml", "../config.yml", "/etc/taskmasterd/config.yml"];
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Jobs {
     pub programs: HashMap<String, Job>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+impl Jobs {
+    pub fn auto_start(&mut self) {
+        for (name, job) in self.programs.iter_mut() {
+            if job.config.autostart {
+                job.start(name.clone()).unwrap();
+            }
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Job {
     #[serde(flatten)]
     pub config: JobConfig,
     #[serde(skip)]
     pub processes: Vec<Process>,
+}
+
+impl Job {
+    pub fn start(&mut self, mut name: String) -> Result<()> {
+        for i in 0..self.config.numprocs.0.into() {
+            name = format!("{}-{}", name, i);
+            let process = Process::new(name.clone(), &self.config.cmd);
+            self.processes.push(process);
+        }
+        Ok(())
+    }
 }
 
 pub fn find_config() -> Option<PathBuf> {
