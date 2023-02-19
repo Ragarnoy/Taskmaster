@@ -1,3 +1,5 @@
+mod job;
+
 use anyhow::{Context, Result};
 use daemonize_me::Daemon;
 use std::io::{Read, Write};
