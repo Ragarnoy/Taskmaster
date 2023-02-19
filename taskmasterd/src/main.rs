@@ -31,6 +31,11 @@ pub fn main_loop() -> Result<()> {
     let term = Arc::new(AtomicBool::new(false));
     let mut response = String::new();
     signal_hook::flag::register(signal_hook::consts::SIGHUP, Arc::clone(&term))?;
+    let mut jobs = match job::find_config() {
+        Some(path) => job::load_config_file(path)?,
+        None => Default::default(),
+    };
+    jobs.auto_start()?;
     while !term.load(Ordering::Relaxed) {
         if let Ok((mut stream, _)) = unix_listener.accept() {
             stream

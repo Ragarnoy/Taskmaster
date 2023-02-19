@@ -4,7 +4,7 @@ programs:
     numprocs: 1
     umask: 022
     workingdir: /tmp
-    autostart: true
+    autostart: false
     autorestart: unexpected
     exitcodes:
       - 0
@@ -18,8 +18,8 @@ programs:
     env:
       STARTED_BY: taskmaster
       ANSWER: 42
-  vogsphere:
-    cmd: "/usr/local/bin/vogsphere-worker --no-prefork"
+  failure:
+    cmd: "/mnt/nfs/homes/ygaude/Projects/taskmaster/test.sh"
     numprocs: 8
     umask: 077
     workingdir: /tmp
