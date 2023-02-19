@@ -1,13 +1,14 @@
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum StopSignal {
     #[default]
-    SigTerm,
-    SigKill,
-    SigInt,
-    SigQuit,
-    SigHup,
-    SigUsr1,
-    SigUsr2,
+    Term,
+    Kill,
+    Int,
+    Quit,
+    Hup,
+    Usr1,
+    Usr2,
 }
