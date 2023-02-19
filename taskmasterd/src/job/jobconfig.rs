@@ -5,19 +5,22 @@ use crate::job::jobconfig::stopsignal::StopSignal;
 use crate::job::jobconfig::workingdir::WorkingDir;
 use serde::Deserialize;
 use std::path::PathBuf;
+use serde_yaml::Value;
+use crate::job::jobconfig::umask::Umask;
 
 pub mod autorestart;
 pub mod exitcodes;
 pub mod numprocs;
 pub mod stopsignal;
 pub mod workingdir;
+mod umask;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct JobConfig {
     pub cmd: String,
     #[serde(default)]
     pub numprocs: NumProcs,
-    pub umask: Option<u32>,
+    pub umask: Option<Umask>,
     #[serde(default)]
     pub workingdir: WorkingDir,
     #[serde(default)]
