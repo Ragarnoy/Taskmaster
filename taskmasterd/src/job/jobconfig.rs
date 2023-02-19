@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::job::jobconfig::autorestart::AutoRestart;
 use crate::job::jobconfig::exitcodes::ExitCodes;
 use crate::job::jobconfig::numprocs::NumProcs;
@@ -39,5 +40,5 @@ pub struct JobConfig {
     pub stopsignal: StopSignal,
     pub stdout: Option<PathBuf>,
     pub stderr: Option<PathBuf>,
-    pub env: Option<String>,
+    pub env: Option<HashMap<String, Value>>,
 }
