@@ -1,4 +1,5 @@
-use std::process::Child;
+use anyhow::Result;
+use std::process::{Child, Command, ExitStatus};
 
 #[derive(Debug, Clone, Default)]
 pub enum Status {
@@ -13,22 +14,74 @@ pub enum Status {
 #[derive(Debug)]
 pub struct Process {
     pub name: String,
-    pub pid: i32,
-    pub child: Child,
+    pub command: Command,
+    pub child: Option<Child>,
+    pub pid: Option<u32>,
     pub status: Status,
 }
 
 impl Process {
-    pub fn new(name: String, command: &str) -> Self {
-        let child = std::process::Command::new(command)
-            .spawn()
-            .expect("Failed to spawn process");
-        let pid = child.id() as i32;
-        Self {
+    pub fn new(name: String, command: &str) -> Result<Self> {
+        let command = Command::new(command);
+        Ok(Self {
             name,
-            pid,
-            child,
-            status: Status::Starting,
+            command,
+            child: None,
+            pid: None,
+            status: Status::default(),
+        })
+    }
+
+    pub fn start(&mut self) -> Result<()> {
+        let child = self.command.spawn()?;
+        self.pid = Some(child.id());
+        self.child = Some(child);
+        self.status = Status::Starting;
+        Ok(())
+    }
+
+    pub fn stop(&mut self) -> Result<()> {
+        if let Some(child) = self.child.as_mut() {
+            child.kill()?;
+        }
+        self.status = Status::Stopped;
+        self.pid = None;
+        self.child = None;
+        Ok(())
+    }
+
+    pub fn restart(&mut self) -> Result<()> {
+        self.status = Status::Restarting;
+        self.stop()?;
+        self.start()?;
+        self.status = Status::Starting;
+        Ok(())
+    }
+
+    pub fn check_status(&mut self) -> Result<Option<ExitStatus>> {
+        if let Some(child) = self.child.as_mut() {
+            match child.try_wait()? {
+                Some(status) => {
+                    self.status = Status::Stopped;
+                    self.pid = None;
+                    self.child = None;
+                    Ok(Some(status))
+                }
+                None => {
+                    self.status = Status::Running;
+                    Ok(None)
+                }
+            }
+        } else {
+            Err(anyhow::anyhow!("No child process"))
+        }
+    }
+}
+
+impl Drop for Process {
+    fn drop(&mut self) {
+        if let Some(child) = self.child.as_mut() {
+            child.kill().unwrap();
         }
     }
 }
