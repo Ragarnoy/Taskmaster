@@ -1,14 +1,15 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
 use crate::job::jobconfig::JobConfig;
 use crate::job::process::Process;
-use serde::Deserialize;
 use anyhow::Result;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 pub mod jobconfig;
 pub mod process;
 
-const DEFAULT_CONFIG_PATHS: [&str; 3] = ["config.yml", "../config.yml", "/etc/taskmasterd/config.yml"];
+const DEFAULT_CONFIG_PATHS: [&str; 3] =
+    ["config.yml", "../config.yml", "/etc/taskmasterd/config.yml"];
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Jobs {
@@ -42,7 +43,6 @@ pub fn load_config(str: &str) -> Result<Jobs> {
     let jobs: Jobs = serde_yaml::from_str(str)?;
     Ok(jobs)
 }
-
 
 #[cfg(test)]
 mod tests {
