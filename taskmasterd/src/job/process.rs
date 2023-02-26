@@ -44,9 +44,7 @@ impl Process {
         if let Some(child) = self.child.as_mut() {
             child.kill()?;
         }
-        self.status = Status::Stopped;
-        self.pid = None;
-        self.child = None;
+        self.check_status()?;
         Ok(())
     }
 
@@ -58,7 +56,7 @@ impl Process {
         Ok(())
     }
 
-    pub fn check_status(&mut self) -> Result<Option<ExitStatus>> {
+    pub fn check_status(&mut self) -> Result<Option<ExitStatus>, CheckStatusError> {
         if let Some(child) = self.child.as_mut() {
             match child.try_wait()? {
                 Some(status) => {
@@ -73,9 +71,14 @@ impl Process {
                 }
             }
         } else {
-            Err(anyhow::anyhow!("No child process"))
+            Err(CheckStatusError::NoChildProcess)
         }
     }
+}
+
+pub enum CheckStatusError {
+    NoChildProcess,
+    TryWaitError,
 }
 
 impl Drop for Process {
