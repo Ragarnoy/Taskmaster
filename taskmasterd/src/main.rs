@@ -12,6 +12,7 @@ pub const FILES_DIR: &str = "/tmp/taskmasterd";
 const SOCKET_PATH: &str = "/tmp/taskmasterd/taskmasterd.sock";
 
 #[derive(Parser)]
+#[command(version, author, about)]
 struct Opts {
     #[clap(short, long)]
     nodaemon: bool,
