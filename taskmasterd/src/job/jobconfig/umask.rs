@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Umask(u32);
+pub struct Umask(pub u32);
 
 impl<'de> Deserialize<'de> for Umask {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
