@@ -39,7 +39,7 @@ impl Job {
     pub fn start(&mut self, mut name: String) -> Result<()> {
         for i in 0..self.config.numprocs.0.into() {
             name = format!("{}-{}", name, i);
-            let mut process = Process::new(name.clone(), &self.config.cmd)?;
+            let mut process = Process::new(name.clone(), &self.config)?;
             process.start()?;
             self.processes.push(process);
         }
