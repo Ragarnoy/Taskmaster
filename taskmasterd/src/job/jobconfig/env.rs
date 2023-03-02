@@ -4,7 +4,7 @@ use serde_yaml::Value;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub struct Env(HashMap<String, String>);
+pub struct Env(pub HashMap<String, String>);
 
 impl<'de> Deserialize<'de> for Env {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
