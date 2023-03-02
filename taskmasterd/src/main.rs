@@ -57,6 +57,8 @@ pub fn main_loop() -> Result<()> {
 
 fn main() -> Result<()> {
     let opts = Opts::parse();
+    // create a directory for the tmp files if it doesn't exist
+    std::fs::create_dir_all(FILES_DIR).context("could not create files directory")?;
     if opts.nodaemon {
         main_loop()?;
     } else {
