@@ -45,7 +45,7 @@ pub struct Process {
 
 impl Process {
     pub fn new(name: String, config: &JobConfig) -> Result<Self> {
-        let mut command = Command::new(&config.cmd);
+        let mut command = Command::new(std::fs::canonicalize(&config.cmd)?);
         command.current_dir(config.workingdir.0.clone());
         if let Some(env) = &config.env {
             command.envs(env.0.iter());
