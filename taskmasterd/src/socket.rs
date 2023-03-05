@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::fs;
 use std::io::{Read, Write};
-use std::os::unix::net::UnixListener;
+use std::os::unix::net::{UnixListener, UnixStream};
 
 pub struct Socket {
     listener: UnixListener,
@@ -22,29 +22,21 @@ impl Socket {
         Ok(Self { listener })
     }
 
-    pub fn read(&self, response: &mut String) -> Result<bool> {
+    pub fn read(&self, response: &mut String) -> Result<Option<UnixStream>> {
         if let Ok((mut stream, _)) = self.listener.accept() {
             stream
                 .read_to_string(response)
                 .context("Failed at reading the request")?;
-            eprintln!("message: {}", response);
-            stream
-                .write_all(format!("ack {}", response).as_bytes())
-                .context("Failed at writing the response")?;
-            Ok(true)
+            Ok(Some(stream))
         } else {
-            Ok(false)
+            Ok(None)
         }
     }
 
-    pub fn write(&self, response: &str) -> Result<()> {
-        if let Ok((mut stream, _)) = self.listener.accept() {
-            stream
-                .write_all(response.as_bytes())
-                .context("Failed at writing the response")?;
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Failed to write to socket"))
-        }
+    pub fn write(&self, response: &str, mut stream: UnixStream) -> Result<()> {
+        stream
+            .write_all(response.as_bytes())
+            .context("Failed at writing the response")?;
+        Ok(())
     }
 }

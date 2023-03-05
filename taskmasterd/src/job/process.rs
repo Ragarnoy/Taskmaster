@@ -159,7 +159,7 @@ impl Process {
 
 impl Display for Process {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.name, self.state)
+        writeln!(f, "{}: {}", self.name, self.state)
     }
 }
 

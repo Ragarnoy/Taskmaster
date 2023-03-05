@@ -48,28 +48,28 @@ fn main() -> Result<()> {
     let message = match args.command {
         Some(Command::Start { processes }) => {
             if processes.is_empty() {
-                "start all".to_string()
+                "start".to_string()
             } else {
                 format!("start {}", processes.join(" "))
             }
         }
         Some(Command::Stop { processes }) => {
             if processes.is_empty() {
-                "stop all".to_string()
+                "stop".to_string()
             } else {
                 format!("stop {}", processes.join(" "))
             }
         }
         Some(Command::Restart { processes }) => {
             if processes.is_empty() {
-                "restart all".to_string()
+                "restart".to_string()
             } else {
                 format!("restart {}", processes.join(" "))
             }
         }
         Some(Command::Status { name }) => {
             if name.is_empty() {
-                "status all".to_string()
+                "status".to_string()
             } else {
                 format!("status {}", name.join(" "))
             }
@@ -102,6 +102,6 @@ fn read_from_stream(unix_stream: &mut UnixStream) -> Result<()> {
     unix_stream
         .read_to_string(&mut response)
         .context("Failed at reading from the unix stream")?;
-    println!("response:\n{}", response);
+    println!("{}", response);
     Ok(())
 }
