@@ -47,7 +47,7 @@ pub fn main_loop() -> Result<()> {
     jobs.auto_start().context("Jobs auto-start failed")?;
     while !term.load(Ordering::Relaxed) {
         if socket.read(&mut response)? {
-            if response == "quit" {
+            if response == "shutdown" {
                 break;
             }
             response.clear();
