@@ -1,6 +1,6 @@
 use crate::job::jobconfig::JobConfig;
 use crate::job::process::Process;
-use anyhow::{Ok, Result};
+use anyhow::{anyhow, Ok, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -48,22 +48,70 @@ impl Jobs {
         Ok(())
     }
 
+    pub fn status(&self, name: &str) -> Result<String> {
+        if name.is_empty() {
+            return self.status_all();
+        }
+        if let Some(job) = self.programs.get(name) {
+            return Ok(job.print_status());
+        }
+        Err(anyhow!("Job {} not found", name))
+    }
+
+    pub fn status_all(&self) -> Result<String> {
+        let mut status = String::new();
+        for job in self.programs.values() {
+            status.push_str(&job.print_status());
+        }
+        Ok(status)
+    }
+
     pub fn start(&mut self, name: &str) -> Result<()> {
+        if name.is_empty() {
+            return self.start_all();
+        }
         if let Some(job) = self.programs.get_mut(name) {
             job.start(name.to_string())?;
         }
         Ok(())
     }
 
+    pub fn start_all(&mut self) -> Result<()> {
+        for (name, job) in self.programs.iter_mut() {
+            job.start(name.clone())?;
+        }
+        Ok(())
+    }
+
     pub fn stop(&mut self, name: &str) -> Result<()> {
+        if name.is_empty() {
+            return self.stop_all();
+        }
         if let Some(job) = self.programs.get_mut(name) {
             job.stop()?;
         }
         Ok(())
     }
 
+    pub fn stop_all(&mut self) -> Result<()> {
+        for job in self.programs.values_mut() {
+            job.stop()?;
+        }
+        Ok(())
+    }
+
     pub fn restart(&mut self, name: &str) -> Result<()> {
+        if name.is_empty() {
+            return self.restart_all();
+        }
         if let Some(job) = self.programs.get_mut(name) {
+            job.restart()?;
+        }
+        Ok(())
+    }
+
+    pub fn restart_all(&mut self) -> Result<()> {
+        for job in self.programs.values_mut() {
             job.restart()?;
         }
         Ok(())
@@ -112,15 +160,15 @@ impl Job {
         Ok(())
     }
 
-    pub fn is_running(&self) -> bool {
-        !self.processes.is_empty()
-    }
-
     pub fn restart(&mut self) -> Result<()> {
         for process in self.processes.iter_mut() {
             process.restart(&self.config)?;
         }
         Ok(())
+    }
+
+    pub fn is_running(&self) -> bool {
+        !self.processes.is_empty()
     }
 
     pub fn check_status(&mut self) -> Result<()> {
@@ -138,7 +186,7 @@ impl Job {
                         return Err(e);
                     }
                 }
-                anyhow::Result::Ok(status) => {
+                Result::Ok(status) => {
                     if let Some(fatal) = status {
                         use crate::job::jobconfig::autorestart::*;
                         match self.config.autorestart {
@@ -158,6 +206,14 @@ impl Job {
         }
         self.processes.retain(|p| p.is_running());
         Ok(())
+    }
+
+    pub fn print_status(&self) -> String {
+        let mut status = String::new();
+        for process in self.processes.iter() {
+            status.push_str(&process.to_string());
+        }
+        status
     }
 }
 
