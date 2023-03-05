@@ -18,11 +18,25 @@ pub enum RunningStatus {
     StopRequested(Instant),
 }
 
-type Fatal = bool;
+/// Status of a stopped process
+#[derive(Debug, Default)]
+pub enum StoppedStatus {
+    /// Process exited before being fully started
+    Backoff,
+    /// Process could not be started
+    Fatal,
+    /// Process exited unexpectedly
+    Unexpected,
+    /// Process exited safely
+    Exited,
+    /// Process was stopped or never started
+    #[default]
+    Stopped,
+}
 
 #[derive(Debug)]
 enum State {
-    Stopped(Fatal),
+    Stopped(StoppedStatus),
     Running {
         pid: Pid,
         child: Child,
@@ -33,13 +47,13 @@ enum State {
 impl Display for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            State::Stopped(fatal) => {
-                if *fatal {
-                    write!(f, "FATAL")
-                } else {
-                    write!(f, "STOPPED")
-                }
-            }
+            State::Stopped(fatal) => match fatal {
+                StoppedStatus::Backoff => write!(f, "BACKOFF"),
+                StoppedStatus::Fatal => write!(f, "FATAL"),
+                StoppedStatus::Unexpected => write!(f, "UNEXPECTED"),
+                StoppedStatus::Exited => write!(f, "EXITED"),
+                StoppedStatus::Stopped => write!(f, "STOPPED"),
+            },
             State::Running { pid, status, .. } => {
                 write!(f, "RUNNING (pid: {}, status: {:?})", pid, status)
             }
@@ -49,7 +63,7 @@ impl Display for State {
 
 impl Default for State {
     fn default() -> Self {
-        Self::Stopped(false)
+        Self::Stopped(StoppedStatus::default())
     }
 }
 
@@ -116,18 +130,34 @@ impl Process {
         Ok(())
     }
 
-    pub fn check_status(&mut self, config: &JobConfig) -> Result<Option<Fatal>> {
+    /// Check the status of the process
+    /// Returns None if the process is still running
+    /// Returns Some(true) if the process exited with an expected exit code
+    /// Returns Some(false) if the process exited with an unexpected exit code
+    pub fn check_status(&mut self, config: &JobConfig) -> Result<Option<bool>> {
         match &mut self.state {
             State::Stopped(_) => Err(anyhow!(CheckStatusError::NoChildProcess)),
             State::Running { child, status, .. } => match child.try_wait()? {
                 Some(exit_status) => {
-                    let fatal = if let Some(exit_code) = exit_status.code() {
-                        !config.exitcodes.is_valid(exit_code)
+                    let expected = if let Some(exit_code) = exit_status.code() {
+                        config.exitcodes.is_valid(exit_code)
                     } else {
-                        false
+                        true // <== process received a signal, so it's expected
                     };
-                    self.state = State::Stopped(fatal);
-                    Ok(Some(fatal))
+                    self.state = State::Stopped(match status {
+                        RunningStatus::StartRequested(_) => {
+                            StoppedStatus::Backoff // TODO implement max retries
+                        }
+                        RunningStatus::StopRequested(_) => StoppedStatus::Stopped,
+                        RunningStatus::Running => {
+                            if expected {
+                                StoppedStatus::Exited
+                            } else {
+                                StoppedStatus::Unexpected
+                            }
+                        }
+                    });
+                    Ok(Some(expected))
                 }
                 None => {
                     match status {

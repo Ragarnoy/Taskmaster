@@ -187,14 +187,14 @@ impl Job {
                     }
                 }
                 Result::Ok(status) => {
-                    if let Some(fatal) = status {
+                    if let Some(expected) = status {
                         use crate::job::jobconfig::autorestart::*;
                         match self.config.autorestart {
                             AutoRestart::True => {
                                 process.start()?;
                             }
                             AutoRestart::Unexpected => {
-                                if fatal {
+                                if !expected {
                                     process.start()?;
                                 }
                             }
