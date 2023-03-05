@@ -24,3 +24,10 @@ impl<'de> Deserialize<'de> for ExitCodes {
         }
     }
 }
+
+impl ExitCodes {
+    #[inline]
+    pub fn is_valid(&self, code: i32) -> bool {
+        self.0.contains(&code)
+    }
+}

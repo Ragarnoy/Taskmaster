@@ -92,16 +92,36 @@ impl Job {
         use crate::job::process::CheckStatusError;
 
         for process in self.processes.iter_mut() {
-            if let Err(e) = process.check_status() {
-                if let CheckStatusError::NoChildProcess =
-                    e.downcast_ref::<CheckStatusError>().unwrap()
-                {
-                    continue;
-                } else {
-                    return Err(e);
+            let status = process.check_status(&self.config.exitcodes);
+            match status {
+                Err(e) => {
+                    if let CheckStatusError::NoChildProcess =
+                        e.downcast_ref::<CheckStatusError>().unwrap()
+                        {
+                            continue;
+                        } else {
+                            return Err(e);
+                        }
+                },
+                anyhow::Result::Ok(status) => {
+                    if let Some(fatal) = status {
+                        use crate::job::jobconfig::autorestart::*;
+                        match self.config.autorestart {
+                            AutoRestart::True => {
+                                process.start()?;
+                            }
+                            AutoRestart::Unexpected => {
+                                if fatal {
+                                    process.start()?;
+                                }
+                            }
+                            AutoRestart::False => (),
+                        }
+                    }
                 }
             }
         }
+        self.processes.retain(|p| p.is_running());
         Ok(())
     }
 }
