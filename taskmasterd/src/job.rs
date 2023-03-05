@@ -17,6 +17,30 @@ pub struct Jobs {
 }
 
 impl Jobs {
+    pub fn load_new_config(&mut self, new_conf: &str) -> Result<()> {
+        let new_jobs: Jobs = load_config(new_conf)?;
+        // if job is in new config, and is not equal to old config, update it and restart it
+        // if job is in new config but not in old config, insert it
+        // if job is in old config but not in new config, remove it
+        self.programs
+            .retain(|name, _| new_jobs.programs.contains_key(name));
+
+        for (name, job) in new_jobs.programs {
+            if let Some(old_job) = self.programs.get_mut(&name) {
+                if old_job.config != job.config {
+                    old_job.stop()?;
+                    old_job.config = job.config.clone();
+                    if old_job.config.autostart {
+                        old_job.start(name.clone())?;
+                    }
+                }
+            } else {
+                self.programs.insert(name, job);
+            }
+        }
+        Ok(())
+    }
+
     pub fn auto_start(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
             if job.config.autostart {
@@ -88,6 +112,10 @@ impl Job {
         }
         self.processes.clear();
         Ok(())
+    }
+
+    pub fn is_running(&self) -> bool {
+        !self.processes.is_empty()
     }
 
     pub fn restart(&mut self) -> Result<()> {
