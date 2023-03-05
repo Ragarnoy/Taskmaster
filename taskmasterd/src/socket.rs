@@ -36,4 +36,15 @@ impl Socket {
             Ok(false)
         }
     }
+
+    pub fn write(&self, response: &str) -> Result<()> {
+        if let Ok((mut stream, _)) = self.listener.accept() {
+            stream
+                .write_all(response.as_bytes())
+                .context("Failed at writing the response")?;
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Failed to write to socket"))
+        }
+    }
 }

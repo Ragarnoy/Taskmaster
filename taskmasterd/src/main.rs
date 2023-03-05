@@ -1,5 +1,6 @@
 mod daemon;
 mod job;
+mod listener;
 mod sleeper;
 mod socket;
 
@@ -8,8 +9,10 @@ use crate::socket::Socket;
 use anyhow::{Context, Result};
 use clap::*;
 use job::Jobs;
+use listener::Action;
 use signal_hook::consts::signal::SIGHUP;
 use std::fs;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -47,8 +50,23 @@ pub fn main_loop() -> Result<()> {
     jobs.auto_start().context("Jobs auto-start failed")?;
     while !term.load(Ordering::Relaxed) {
         if socket.read(&mut response)? {
-            if response == "shutdown" {
-                break;
+            let action = Action::from_str(&response)?;
+            match action {
+                Action::Start(name) => jobs.start(&name).context("Job start failed")?,
+                Action::Stop(name) => jobs.stop(&name).context("Job stop failed")?,
+                Action::Restart(name) => jobs.restart(&name).context("Job restart failed")?,
+                Action::Status(name) => {
+                    let status = jobs.status(&name).context("Job status failed")?;
+                    socket.write(&status)?;
+                }
+                Action::Reload => {
+                    jobs = get_jobs()?;
+                    jobs.auto_start().context("Jobs auto-start failed")?;
+                }
+                Action::Shutdown => {
+                    jobs.stop_all().context("Jobs stop failed")?;
+                    break;
+                }
             }
             response.clear();
         }
