@@ -102,6 +102,6 @@ fn read_from_stream(unix_stream: &mut UnixStream) -> Result<()> {
     unix_stream
         .read_to_string(&mut response)
         .context("Failed at reading from the unix stream")?;
-    println!("response: \n{}", response);
+    println!("response:\n{}", response);
     Ok(())
 }
