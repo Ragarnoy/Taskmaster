@@ -30,6 +30,23 @@ enum State {
     },
 }
 
+impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::Stopped(fatal) => {
+                if *fatal {
+                    write!(f, "FATAL")
+                } else {
+                    write!(f, "STOPPED")
+                }
+            }
+            State::Running { pid, status, .. } => {
+                write!(f, "RUNNING (pid: {}, status: {:?})", pid, status)
+            }
+        }
+    }
+}
+
 impl Default for State {
     fn default() -> Self {
         Self::Stopped(false)
@@ -137,6 +154,12 @@ impl Process {
             State::Stopped(_) => false,
             State::Running { .. } => true,
         }
+    }
+}
+
+impl Display for Process {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.name, self.state)
     }
 }
 
