@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer};
 use serde_yaml::Value;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExitCodes(Vec<i32>);
 
 impl Default for ExitCodes {

@@ -3,7 +3,7 @@ use serde::Deserializer;
 use serde_yaml::Value;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Env(pub HashMap<String, String>);
 
 impl<'de> Deserialize<'de> for Env {

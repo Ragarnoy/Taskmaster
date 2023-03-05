@@ -63,6 +63,14 @@ pub struct Job {
     pub processes: Vec<Process>,
 }
 
+impl PartialEq for Job {
+    fn eq(&self, other: &Self) -> bool {
+        self.config == other.config
+    }
+}
+
+impl Eq for Job {}
+
 impl Job {
     pub fn start(&mut self, mut name: String) -> Result<()> {
         for i in 0..self.config.numprocs.0.into() {
@@ -152,6 +160,13 @@ mod tests {
                 STARTED_BY: taskmaster
                 ANSWER: 42
 "#;
+
+    #[test]
+    fn test_config_diff() {
+        let jobs = load_config(CONFIG_EXAMPLE).unwrap();
+        let new_jobs = load_config(CONFIG_EXAMPLE).unwrap();
+        assert_eq!(jobs.programs, new_jobs.programs);
+    }
 
     #[test]
     fn test_find_config() {
