@@ -89,8 +89,9 @@ impl Job {
     }
 
     pub fn check_status(&mut self) -> Result<()> {
+        use crate::job::process::CheckStatusError;
+
         for process in self.processes.iter_mut() {
-            use crate::job::process::CheckStatusError;
             if let Err(e) = process.check_status() {
                 if let CheckStatusError::NoChildProcess =
                     e.downcast_ref::<CheckStatusError>().unwrap()
