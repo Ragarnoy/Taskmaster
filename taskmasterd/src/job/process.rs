@@ -1,3 +1,4 @@
+use super::jobconfig::exitcodes::ExitCodes;
 use crate::job::jobconfig::stopsignal::StopSignal;
 use crate::job::jobconfig::umask::Umask;
 use crate::job::jobconfig::JobConfig;
@@ -7,7 +8,7 @@ use nix::sys::stat::{umask, Mode};
 use nix::unistd::Pid;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
-use std::process::{Child, Command, ExitStatus};
+use std::process::{Child, Command};
 
 // TODO Restrain PID to Running states
 #[derive(Debug, Clone, Copy)]
@@ -98,13 +99,18 @@ impl Process {
         Ok(())
     }
 
-    pub fn check_status(&mut self) -> Result<Option<ExitStatus>> {
+    pub fn check_status(&mut self, ok_exit_codes: &ExitCodes) -> Result<Option<Fatal>> {
         match &mut self.state {
             State::Stopped(_) => Err(anyhow!(CheckStatusError::NoChildProcess)),
             State::Running { child, status, .. } => match child.try_wait()? {
                 Some(exit_status) => {
-                    self.state = State::Stopped(false);
-                    Ok(Some(exit_status))
+                    let fatal = if let Some(exit_code) = exit_status.code() {
+                        !ok_exit_codes.is_valid(exit_code)
+                    } else {
+                        false
+                    };
+                    self.state = State::Stopped(fatal);
+                    Ok(Some(fatal))
                 }
                 None => {
                     if let RunningStatus::StartRequested = status {
@@ -113,6 +119,13 @@ impl Process {
                     Ok(None)
                 }
             },
+        }
+    }
+
+    pub fn is_running(&self) -> bool {
+        match &self.state {
+            State::Stopped(_) => false,
+            State::Running { .. } => true,
         }
     }
 }
