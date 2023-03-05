@@ -86,6 +86,7 @@ impl Job {
         for process in self.processes.iter_mut() {
             process.stop(self.config.stopsignal)?;
         }
+        self.processes.clear();
         Ok(())
     }
 
