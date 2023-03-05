@@ -44,7 +44,6 @@ enum Command {
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
     let message = std::env::args().skip(1).collect::<Vec<_>>().join(" ");
     if !message.is_empty() {
         let mut unix_stream =

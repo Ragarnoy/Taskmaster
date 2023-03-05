@@ -6,6 +6,8 @@ pub struct WorkingDir(pub PathBuf);
 
 impl Default for WorkingDir {
     fn default() -> Self {
-        unimplemented!("Needs taskmasterd config path")
+        // get current working directory
+        let cwd = std::env::current_dir().expect("Failed to get current working directory");
+        Self(cwd)
     }
 }
