@@ -191,14 +191,16 @@ impl Job {
                         use crate::job::jobconfig::autorestart::*;
                         match self.config.autorestart {
                             AutoRestart::True => {
+                                println!("{}: restart", process.name);
                                 process.start()?;
                             }
                             AutoRestart::Unexpected => {
+                                println!("{}: unexpected exit, restart", process.name);
                                 if !expected {
                                     process.start()?;
                                 }
                             }
-                            AutoRestart::False => (),
+                            AutoRestart::False => println!("{}: exited", process.name),
                         }
                     }
                 }
