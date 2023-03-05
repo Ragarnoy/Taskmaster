@@ -13,9 +13,11 @@ impl FromStr for Action {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
-        let parts = s.split_once(' ').unwrap_or((s, ""));
-        let action = parts.0;
-        let name = parts.1;
+        let mut parts = s.split_whitespace();
+        let action = parts
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("Invalid action"))?;
+        let name = parts.next().unwrap_or("");
         match action {
             "start" => Ok(Action::Start(name.to_string())),
             "stop" => Ok(Action::Stop(name.to_string())),
@@ -23,7 +25,7 @@ impl FromStr for Action {
             "status" => Ok(Action::Status(name.to_string())),
             "reload" => Ok(Action::Reload),
             "shutdown" => Ok(Action::Shutdown),
-            _ => Err(anyhow::anyhow!("Unknown action")),
+            _ => Err(anyhow::anyhow!("Invalid action")),
         }
     }
 }

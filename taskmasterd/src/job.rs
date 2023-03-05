@@ -42,7 +42,7 @@ impl Jobs {
     pub fn auto_start(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
             if job.config.autostart && !job.is_running() {
-                job.start(name.clone())?;
+                job.start(name)?;
             }
         }
         Ok(())
@@ -51,8 +51,7 @@ impl Jobs {
     pub fn status(&self, name: &str) -> Result<String> {
         if name.is_empty() {
             return self.status_all();
-        }
-        if let Some(job) = self.programs.get(name) {
+        } else if let Some(job) = self.programs.get(name) {
             return Ok(job.print_status());
         }
         Err(anyhow!("Job {} not found", name))
@@ -60,8 +59,10 @@ impl Jobs {
 
     pub fn status_all(&self) -> Result<String> {
         let mut status = String::new();
-        for job in self.programs.values() {
+        for (name, job) in self.programs.iter() {
+            status.push_str(format!("Job status {}:\n", name).as_str());
             status.push_str(&job.print_status());
+            status.push('\n');
         }
         Ok(status)
     }
@@ -71,14 +72,14 @@ impl Jobs {
             return self.start_all();
         }
         if let Some(job) = self.programs.get_mut(name) {
-            job.start(name.to_string())?;
+            job.start(name)?;
         }
         Ok(())
     }
 
     pub fn start_all(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
-            job.start(name.clone())?;
+            job.start(name)?;
         }
         Ok(())
     }
@@ -142,9 +143,9 @@ impl PartialEq for Job {
 impl Eq for Job {}
 
 impl Job {
-    pub fn start(&mut self, mut name: String) -> Result<()> {
+    pub fn start(&mut self, name: &str) -> Result<()> {
         for i in 0..self.config.numprocs.0.into() {
-            name = format!("{}-{}", name, i);
+            let name = format!("{}-{}", name, i);
             let mut process = Process::new(name.clone(), &self.config)?;
             process.start()?;
             self.processes.push(process);
@@ -156,7 +157,6 @@ impl Job {
         for process in self.processes.iter_mut() {
             process.stop(self.config.stopsignal)?;
         }
-        self.processes.clear();
         Ok(())
     }
 
@@ -210,8 +210,12 @@ impl Job {
 
     pub fn print_status(&self) -> String {
         let mut status = String::new();
-        for process in self.processes.iter() {
-            status.push_str(&process.to_string());
+        if self.processes.is_empty() {
+            status.push_str("No process running\n");
+        } else {
+            self.processes.iter().for_each(|p| {
+                status.push_str(&p.to_string());
+            });
         }
         status
     }

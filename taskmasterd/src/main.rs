@@ -49,7 +49,7 @@ pub fn main_loop() -> Result<()> {
     let mut sleeper = Sleeper::new(100)?;
     jobs.auto_start().context("Jobs auto-start failed")?;
     while !term.load(Ordering::Relaxed) {
-        if socket.read(&mut response)? {
+        if let Some(stream) = socket.read(&mut response)? {
             let action = Action::from_str(&response)?;
             match action {
                 Action::Start(name) => jobs.start(&name).context("Job start failed")?,
@@ -57,7 +57,7 @@ pub fn main_loop() -> Result<()> {
                 Action::Restart(name) => jobs.restart(&name).context("Job restart failed")?,
                 Action::Status(name) => {
                     let status = jobs.status(&name).context("Job status failed")?;
-                    socket.write(&status)?;
+                    socket.write(&status, stream)?;
                 }
                 Action::Reload => {
                     jobs = get_jobs()?;
@@ -65,6 +65,10 @@ pub fn main_loop() -> Result<()> {
                 }
                 Action::Shutdown => {
                     jobs.stop_all().context("Jobs stop failed")?;
+                    while jobs.programs.iter().any(|p| p.1.is_running()) {
+                        jobs.check_status().context("Jobs status check failed")?;
+                        sleeper.sleep()?;
+                    }
                     break;
                 }
             }
