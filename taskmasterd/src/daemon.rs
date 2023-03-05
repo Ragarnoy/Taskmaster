@@ -1,5 +1,4 @@
 use crate::main_loop;
-use crate::FILES_DIR;
 use anyhow::{Context, Result};
 use daemonize_me::Daemon;
 
@@ -14,8 +13,6 @@ fn hook(_ppid: i32, _cpid: i32) {
 }
 
 pub fn init() -> Result<()> {
-    // create a directory for the tmp files if it doesn't exist
-    std::fs::create_dir_all(FILES_DIR).context("could not create files directory")?;
     let stdout = std::fs::File::create(STDOUT_FILE).context("could not create stdout file")?;
     let stderr = std::fs::File::create(STDERR_FILE).context("could not create stderr file")?;
     Daemon::new()
