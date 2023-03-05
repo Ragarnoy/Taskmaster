@@ -2,17 +2,21 @@ use autorestart::AutoRestart;
 use env::Env;
 use exitcodes::ExitCodes;
 use numprocs::NumProcs;
+use serde::Deserialize;
+use starttimeout::StartTimeout;
+use std::path::PathBuf;
 use stopsignal::StopSignal;
+use stoptimeout::StopTimeout;
 use umask::Umask;
 use workingdir::WorkingDir;
-use serde::Deserialize;
-use std::path::PathBuf;
 
 pub mod autorestart;
 pub mod env;
 pub mod exitcodes;
 pub mod numprocs;
+pub mod starttimeout;
 pub mod stopsignal;
+pub mod stoptimeout;
 pub mod umask;
 pub mod workingdir;
 
@@ -33,9 +37,9 @@ pub struct JobConfig {
     #[serde(default)]
     pub startretries: u32,
     #[serde(default)]
-    pub stoptimeout: u32,
+    pub stoptimeout: StopTimeout,
     #[serde(default)]
-    pub starttimeout: u32,
+    pub starttimeout: StartTimeout,
     #[serde(default)]
     pub stopsignal: StopSignal,
     pub stdout: Option<PathBuf>,

@@ -127,7 +127,7 @@ impl Job {
         use crate::job::process::CheckStatusError;
 
         for process in self.processes.iter_mut() {
-            let status = process.check_status(&self.config.exitcodes);
+            let status = process.check_status(&self.config);
             match status {
                 Err(e) => {
                     if let CheckStatusError::NoChildProcess =
