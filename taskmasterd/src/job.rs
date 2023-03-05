@@ -30,20 +30,18 @@ impl Jobs {
                 if old_job.config != job.config {
                     old_job.stop()?;
                     old_job.config = job.config.clone();
-                    if old_job.config.autostart {
-                        old_job.start(name.clone())?;
-                    }
                 }
             } else {
                 self.programs.insert(name, job);
             }
         }
+        self.auto_start()?;
         Ok(())
     }
 
     pub fn auto_start(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
-            if job.config.autostart {
+            if job.config.autostart && !job.is_running() {
                 job.start(name.clone())?;
             }
         }
