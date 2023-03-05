@@ -114,6 +114,12 @@ impl Job {
     }
 }
 
+impl Drop for Job {
+    fn drop(&mut self) {
+        self.stop().unwrap();
+    }
+}
+
 pub fn find_config() -> Option<PathBuf> {
     for path in DEFAULT_CONFIG_PATHS.iter() {
         if std::path::Path::new(path).exists() {
