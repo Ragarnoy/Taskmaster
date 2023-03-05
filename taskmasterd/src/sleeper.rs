@@ -1,6 +1,6 @@
+use anyhow::Result;
 use std::thread::sleep;
 use std::time::Duration;
-use anyhow::Result;
 
 pub struct Sleeper {
     duration: Duration,

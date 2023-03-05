@@ -1,3 +1,4 @@
+use super::jobconfig::exitcodes::ExitCodes;
 use crate::job::jobconfig::stopsignal::StopSignal;
 use crate::job::jobconfig::umask::Umask;
 use crate::job::jobconfig::JobConfig;
@@ -8,7 +9,6 @@ use nix::unistd::Pid;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::process::{Child, Command};
-use super::jobconfig::exitcodes::ExitCodes;
 
 // TODO Restrain PID to Running states
 #[derive(Debug, Clone, Copy)]

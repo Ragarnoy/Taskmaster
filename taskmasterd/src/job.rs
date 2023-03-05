@@ -97,12 +97,12 @@ impl Job {
                 Err(e) => {
                     if let CheckStatusError::NoChildProcess =
                         e.downcast_ref::<CheckStatusError>().unwrap()
-                        {
-                            continue;
-                        } else {
-                            return Err(e);
-                        }
-                },
+                    {
+                        continue;
+                    } else {
+                        return Err(e);
+                    }
+                }
                 anyhow::Result::Ok(status) => {
                     if let Some(fatal) = status {
                         use crate::job::jobconfig::autorestart::*;
