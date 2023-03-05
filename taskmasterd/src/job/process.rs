@@ -1,4 +1,3 @@
-use super::jobconfig::exitcodes::ExitCodes;
 use crate::job::jobconfig::stopsignal::StopSignal;
 use crate::job::jobconfig::umask::Umask;
 use crate::job::jobconfig::JobConfig;
@@ -9,13 +8,14 @@ use nix::unistd::Pid;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::process::{Child, Command};
+use std::time::Instant;
 
 // TODO Restrain PID to Running states
 #[derive(Debug, Clone, Copy)]
 pub enum RunningStatus {
     Running,
-    StartRequested,
-    StopRequested,
+    StartRequested(Instant),
+    StopRequested(Instant),
 }
 
 type Fatal = bool;
@@ -78,7 +78,7 @@ impl Process {
         self.state = State::Running {
             pid: Pid::from_raw(child.id() as i32),
             child,
-            status: RunningStatus::StartRequested,
+            status: RunningStatus::StartRequested(Instant::now()),
         };
         Ok(())
     }
@@ -86,7 +86,7 @@ impl Process {
     pub fn stop(&mut self, stop_signal: StopSignal) -> Result<()> {
         if let State::Running { pid, status, .. } = &mut self.state {
             nix::sys::signal::kill(*pid, Signal::from(stop_signal))?;
-            *status = RunningStatus::StopRequested;
+            *status = RunningStatus::StopRequested(Instant::now());
         } else {
             return Err(anyhow!(StopError::NotRunning));
         }
@@ -99,13 +99,13 @@ impl Process {
         Ok(())
     }
 
-    pub fn check_status(&mut self, ok_exit_codes: &ExitCodes) -> Result<Option<Fatal>> {
+    pub fn check_status(&mut self, config: &JobConfig) -> Result<Option<Fatal>> {
         match &mut self.state {
             State::Stopped(_) => Err(anyhow!(CheckStatusError::NoChildProcess)),
             State::Running { child, status, .. } => match child.try_wait()? {
                 Some(exit_status) => {
                     let fatal = if let Some(exit_code) = exit_status.code() {
-                        !ok_exit_codes.is_valid(exit_code)
+                        !config.exitcodes.is_valid(exit_code)
                     } else {
                         false
                     };
@@ -113,8 +113,18 @@ impl Process {
                     Ok(Some(fatal))
                 }
                 None => {
-                    if let RunningStatus::StartRequested = status {
-                        *status = RunningStatus::Running;
+                    match status {
+                        RunningStatus::StartRequested(start_time) => {
+                            if start_time.elapsed().as_secs() >= config.starttimeout.0 {
+                                *status = RunningStatus::Running;
+                            }
+                        }
+                        RunningStatus::StopRequested(stop_time) => {
+                            if stop_time.elapsed().as_secs() >= config.stoptimeout.0 {
+                                self.stop(StopSignal::Kill)?;
+                            }
+                        }
+                        RunningStatus::Running => {}
                     }
                     Ok(None)
                 }
