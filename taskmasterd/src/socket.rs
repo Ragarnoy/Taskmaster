@@ -1,4 +1,3 @@
-use crate::SOCKET_PATH;
 use anyhow::{Context, Result};
 use std::fs;
 use std::io::{Read, Write};
