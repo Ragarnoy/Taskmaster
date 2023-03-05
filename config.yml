@@ -19,7 +19,7 @@ programs:
       STARTED_BY: taskmaster
       ANSWER: 42
   failure:
-    cmd: "/mnt/nfs/homes/ygaude/Projects/taskmaster/test.sh"
+    cmd: "./test.sh"
     numprocs: 8
     umask: 077
     workingdir: /tmp
