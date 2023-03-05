@@ -1,7 +1,7 @@
-use std::os::unix::net::UnixListener;
-use std::io::{Read, Write};
 use anyhow::{Context, Result};
 use std::fs;
+use std::io::{Read, Write};
+use std::os::unix::net::UnixListener;
 
 pub struct Socket {
     listener: UnixListener,
@@ -36,6 +36,4 @@ impl Socket {
             Ok(false)
         }
     }
-
 }
-

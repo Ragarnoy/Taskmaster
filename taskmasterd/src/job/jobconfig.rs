@@ -16,7 +16,7 @@ pub mod stopsignal;
 pub mod umask;
 pub mod workingdir;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct JobConfig {
     pub cmd: String,
     #[serde(default)]

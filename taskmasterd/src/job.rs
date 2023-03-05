@@ -17,9 +17,31 @@ pub struct Jobs {
 }
 
 impl Jobs {
+    pub fn load_new_config(&mut self, new_conf: &str) -> Result<()> {
+        let new_jobs: Jobs = load_config(new_conf)?;
+        // if job is in new config, and is not equal to old config, update it and restart it
+        // if job is in new config but not in old config, insert it
+        // if job is in old config but not in new config, remove it
+        self.programs
+            .retain(|name, _| new_jobs.programs.contains_key(name));
+
+        for (name, job) in new_jobs.programs {
+            if let Some(old_job) = self.programs.get_mut(&name) {
+                if old_job.config != job.config {
+                    old_job.stop()?;
+                    old_job.config = job.config.clone();
+                }
+            } else {
+                self.programs.insert(name, job);
+            }
+        }
+        self.auto_start()?;
+        Ok(())
+    }
+
     pub fn auto_start(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
-            if job.config.autostart {
+            if job.config.autostart && !job.is_running() {
                 job.start(name.clone())?;
             }
         }
@@ -63,6 +85,14 @@ pub struct Job {
     pub processes: Vec<Process>,
 }
 
+impl PartialEq for Job {
+    fn eq(&self, other: &Self) -> bool {
+        self.config == other.config
+    }
+}
+
+impl Eq for Job {}
+
 impl Job {
     pub fn start(&mut self, mut name: String) -> Result<()> {
         for i in 0..self.config.numprocs.0.into() {
@@ -78,7 +108,12 @@ impl Job {
         for process in self.processes.iter_mut() {
             process.stop(self.config.stopsignal)?;
         }
+        self.processes.clear();
         Ok(())
+    }
+
+    pub fn is_running(&self) -> bool {
+        !self.processes.is_empty()
     }
 
     pub fn restart(&mut self) -> Result<()> {
@@ -103,6 +138,12 @@ impl Job {
             }
         }
         Ok(())
+    }
+}
+
+impl Drop for Job {
+    fn drop(&mut self) {
+        self.stop().unwrap();
     }
 }
 
@@ -152,6 +193,13 @@ mod tests {
                 STARTED_BY: taskmaster
                 ANSWER: 42
 "#;
+
+    #[test]
+    fn test_config_diff() {
+        let jobs = load_config(CONFIG_EXAMPLE).unwrap();
+        let new_jobs = load_config(CONFIG_EXAMPLE).unwrap();
+        assert_eq!(jobs.programs, new_jobs.programs);
+    }
 
     #[test]
     fn test_find_config() {

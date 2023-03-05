@@ -3,8 +3,8 @@ mod job;
 mod sleeper;
 mod socket;
 
-use crate::socket::Socket;
 use crate::sleeper::Sleeper;
+use crate::socket::Socket;
 use anyhow::{Context, Result};
 use clap::*;
 use job::Jobs;

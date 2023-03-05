@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::num::NonZeroU32;
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 pub struct NumProcs(pub NonZeroU32);
 
 impl Default for NumProcs {
