@@ -78,6 +78,7 @@ pub fn main_loop() -> Result<()> {
             }
             response.clear();
         }
+        jobs.check_status().context("Jobs status check failed")?;
         sleep(Duration::from_millis(100));
     }
     Ok(())

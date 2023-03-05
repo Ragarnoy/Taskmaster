@@ -1,6 +1,6 @@
 use crate::job::jobconfig::JobConfig;
 use crate::job::process::Process;
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -25,6 +25,34 @@ impl Jobs {
         }
         Ok(())
     }
+
+    pub fn start(&mut self, name: &str) -> Result<()> {
+        if let Some(job) = self.programs.get_mut(name) {
+            job.start(name.to_string())?;
+        }
+        Ok(())
+    }
+
+    pub fn stop(&mut self, name: &str) -> Result<()> {
+        if let Some(job) = self.programs.get_mut(name) {
+            job.stop()?;
+        }
+        Ok(())
+    }
+
+    pub fn restart(&mut self, name: &str) -> Result<()> {
+        if let Some(job) = self.programs.get_mut(name) {
+            job.restart()?;
+        }
+        Ok(())
+    }
+
+    pub fn check_status(&mut self) -> Result<()> {
+        for job in self.programs.values_mut() {
+            job.check_status()?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,6 +70,37 @@ impl Job {
             let mut process = Process::new(name.clone(), &self.config)?;
             process.start()?;
             self.processes.push(process);
+        }
+        Ok(())
+    }
+
+    pub fn stop(&mut self) -> Result<()> {
+        for process in self.processes.iter_mut() {
+            process.stop(self.config.stopsignal)?;
+        }
+        Ok(())
+    }
+
+    pub fn restart(&mut self) -> Result<()> {
+        for process in self.processes.iter_mut() {
+            process.restart(&self.config)?;
+        }
+        Ok(())
+    }
+
+    pub fn check_status(&mut self) -> Result<()> {
+        use crate::job::process::CheckStatusError;
+
+        for process in self.processes.iter_mut() {
+            if let Err(e) = process.check_status() {
+                if let CheckStatusError::NoChildProcess =
+                    e.downcast_ref::<CheckStatusError>().unwrap()
+                {
+                    continue;
+                } else {
+                    return Err(e);
+                }
+            }
         }
         Ok(())
     }
