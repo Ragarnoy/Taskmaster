@@ -168,7 +168,7 @@ impl Job {
     }
 
     pub fn is_running(&self) -> bool {
-        !self.processes.is_empty()
+        self.processes.iter().any(|p| p.is_running())
     }
 
     pub fn check_status(&mut self) -> Result<()> {
