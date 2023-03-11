@@ -91,7 +91,7 @@ fn main() -> Result<()> {
             format!(
                 "load {}",
                 path.canonicalize()
-                    .unwrap()
+                    .expect("path should not have changed since check")
                     .to_str()
                     .context("Could not convert path to string/Invalid path")?
             )
