@@ -1,8 +1,9 @@
 use crate::job::jobconfig::JobConfig;
 use crate::job::process::{Process, State};
-use anyhow::{anyhow, Context, Ok, Result};
+use anyhow::{Context, Ok, Result};
 use serde::Deserialize;
-use std::collections::HashMap;
+
+use crate::jobs::Jobs;
 use std::path::PathBuf;
 
 pub mod jobconfig;
@@ -10,121 +11,6 @@ pub mod process;
 
 const DEFAULT_CONFIG_PATHS: [&str; 3] =
     ["config.yml", "../config.yml", "/etc/taskmasterd/config.yml"];
-
-#[derive(Debug, Deserialize, Default)]
-pub struct Jobs {
-    pub programs: HashMap<String, Job>,
-}
-
-impl Jobs {
-    pub fn load_new_config(&mut self, new_conf: &str) -> Result<()> {
-        let new_jobs: Jobs = load_config(new_conf)?;
-        // if job is in new config, and is not equal to old config, update it and restart it
-        // if job is in new config but not in old config, insert it
-        // if job is in old config but not in new config, remove it
-        self.programs
-            .retain(|name, _| new_jobs.programs.contains_key(name));
-
-        for (name, job) in new_jobs.programs {
-            if let Some(old_job) = self.programs.get_mut(&name) {
-                if old_job.config != job.config {
-                    old_job.stop()?;
-                    old_job.config = job.config.clone();
-                }
-            } else {
-                self.programs.insert(name, job);
-            }
-        }
-        self.auto_start()?;
-        Ok(())
-    }
-
-    pub fn auto_start(&mut self) -> Result<()> {
-        for (name, job) in self.programs.iter_mut() {
-            if job.config.autostart && !job.is_running() {
-                job.start(name)?;
-            }
-        }
-        Ok(())
-    }
-
-    pub fn status(&self, name: &str) -> Result<String> {
-        if name.is_empty() {
-            return self.status_all();
-        } else if let Some(job) = self.programs.get(name) {
-            return Ok(job.print_status());
-        }
-        Err(anyhow!("Job {} not found", name))
-    }
-
-    pub fn status_all(&self) -> Result<String> {
-        let mut status = String::new();
-        for (name, job) in self.programs.iter() {
-            status.push_str(format!("Job status {}:\n", name).as_str());
-            status.push_str(&job.print_status());
-            status.push('\n');
-        }
-        Ok(status)
-    }
-
-    pub fn start(&mut self, name: &str) -> Result<()> {
-        if name.is_empty() {
-            return self.start_all();
-        }
-        if let Some(job) = self.programs.get_mut(name) {
-            job.start(name)?;
-        }
-        Ok(())
-    }
-
-    pub fn start_all(&mut self) -> Result<()> {
-        for (name, job) in self.programs.iter_mut() {
-            job.start(name)?;
-        }
-        Ok(())
-    }
-
-    pub fn stop(&mut self, name: &str) -> Result<()> {
-        if name.is_empty() {
-            return self.stop_all();
-        }
-        if let Some(job) = self.programs.get_mut(name) {
-            job.stop()?;
-        }
-        Ok(())
-    }
-
-    pub fn stop_all(&mut self) -> Result<()> {
-        for job in self.programs.values_mut() {
-            job.stop()?;
-        }
-        Ok(())
-    }
-
-    pub fn restart(&mut self, name: &str) -> Result<()> {
-        if name.is_empty() {
-            return self.restart_all();
-        }
-        if let Some(job) = self.programs.get_mut(name) {
-            job.restart()?;
-        }
-        Ok(())
-    }
-
-    pub fn restart_all(&mut self) -> Result<()> {
-        for job in self.programs.values_mut() {
-            job.restart()?;
-        }
-        Ok(())
-    }
-
-    pub fn check_status(&mut self) -> Result<()> {
-        for job in self.programs.values_mut() {
-            job.check_status()?;
-        }
-        Ok(())
-    }
-}
 
 #[derive(Debug, Deserialize)]
 pub struct Job {
