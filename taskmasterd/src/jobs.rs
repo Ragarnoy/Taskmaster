@@ -1,6 +1,6 @@
-use crate::job;
 use crate::job::Job;
 use anyhow::anyhow;
+use anyhow::Result;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -10,29 +10,40 @@ pub struct Jobs {
 }
 
 impl Jobs {
-    pub fn load_new_config(&mut self, new_conf: &str) -> anyhow::Result<()> {
-        let new_jobs: Jobs = job::load_config(new_conf)?;
+    pub fn load_new_config(&mut self, new_jobs: Jobs) -> Result<()> {
         // if job is in new config, and is not equal to old config, update it and restart it
         // if job is in new config but not in old config, insert it
         // if job is in old config but not in new config, remove it
-        self.programs
-            .retain(|name, _| new_jobs.programs.contains_key(name));
+        let to_remove = self
+            .programs
+            .iter()
+            .filter(|(name, jobs)| {
+                !new_jobs.programs.contains_key(*name)
+                    || jobs.config != new_jobs.programs[*name].config
+            })
+            .map(|(name, _)| name.clone())
+            .collect::<Vec<String>>();
 
-        for (name, job) in new_jobs.programs {
-            if let Some(old_job) = self.programs.get_mut(&name) {
-                if old_job.config != job.config {
-                    old_job.stop()?;
-                    old_job.config = job.config.clone();
-                }
-            } else {
-                self.programs.insert(name, job);
-            }
+        let to_add = new_jobs
+            .programs
+            .into_iter()
+            .filter(|(name, jobs)| {
+                !self.programs.contains_key(name) || self.programs[name].config != jobs.config
+            })
+            .collect::<Vec<(String, Job)>>();
+
+        // FIXME This is slow
+        for name in to_remove {
+            self.remove_job(&name)?;
+        }
+        for (name, job) in to_add {
+            self.programs.insert(name, job);
         }
         self.auto_start()?;
         anyhow::Ok(())
     }
 
-    pub fn auto_start(&mut self) -> anyhow::Result<()> {
+    pub fn auto_start(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
             if job.config.autostart && !job.is_running() {
                 job.start(name)?;
@@ -41,7 +52,7 @@ impl Jobs {
         anyhow::Ok(())
     }
 
-    pub fn status(&self, name: &str) -> anyhow::Result<String> {
+    pub fn status(&self, name: &str) -> Result<String> {
         if name.is_empty() {
             return self.status_all();
         } else if let Some(job) = self.programs.get(name) {
@@ -50,7 +61,7 @@ impl Jobs {
         Err(anyhow!("Job {} not found", name))
     }
 
-    pub fn status_all(&self) -> anyhow::Result<String> {
+    pub fn status_all(&self) -> Result<String> {
         let mut status = String::new();
         for (name, job) in self.programs.iter() {
             status.push_str(format!("Job status {}:\n", name).as_str());
@@ -60,7 +71,7 @@ impl Jobs {
         anyhow::Ok(status)
     }
 
-    pub fn start(&mut self, name: &str) -> anyhow::Result<()> {
+    pub fn start(&mut self, name: &str) -> Result<()> {
         if name.is_empty() {
             return self.start_all();
         }
@@ -70,14 +81,14 @@ impl Jobs {
         anyhow::Ok(())
     }
 
-    pub fn start_all(&mut self) -> anyhow::Result<()> {
+    pub fn start_all(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
             job.start(name)?;
         }
         anyhow::Ok(())
     }
 
-    pub fn stop(&mut self, name: &str) -> anyhow::Result<()> {
+    pub fn stop(&mut self, name: &str) -> Result<()> {
         if name.is_empty() {
             return self.stop_all();
         }
@@ -87,14 +98,14 @@ impl Jobs {
         anyhow::Ok(())
     }
 
-    pub fn stop_all(&mut self) -> anyhow::Result<()> {
+    pub fn stop_all(&mut self) -> Result<()> {
         for job in self.programs.values_mut() {
             job.stop()?;
         }
         anyhow::Ok(())
     }
 
-    pub fn restart(&mut self, name: &str) -> anyhow::Result<()> {
+    pub fn restart(&mut self, name: &str) -> Result<()> {
         if name.is_empty() {
             return self.restart_all();
         }
@@ -104,28 +115,42 @@ impl Jobs {
         anyhow::Ok(())
     }
 
-    pub fn restart_all(&mut self) -> anyhow::Result<()> {
+    pub fn restart_all(&mut self) -> Result<()> {
         for job in self.programs.values_mut() {
             job.restart()?;
         }
         anyhow::Ok(())
     }
 
-    pub fn check_status(&mut self) -> anyhow::Result<()> {
+    pub fn check_status(&mut self) -> Result<()> {
         for job in self.programs.values_mut() {
             job.check_status()?;
         }
         anyhow::Ok(())
     }
 
-    pub fn reload(&mut self) -> anyhow::Result<()> {
+    pub fn reload(&mut self) -> Result<()> {
         println!("Reloading config");
         self.stop_all()?;
+        self.try_wait_job_stop()?;
+        self.clear_jobs();
+        anyhow::Ok(())
+    }
+
+    fn try_wait_job_stop(&mut self) -> Result<()> {
         while self.programs.values().any(|j| j.is_running()) {
             self.check_status()?;
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
-        self.clear_jobs();
+        Ok(())
+    }
+
+    pub fn remove_job(&mut self, name: &str) -> Result<()> {
+        if let Some(job) = self.programs.get_mut(name) {
+            job.stop()?;
+        }
+        self.try_wait_job_stop()?;
+        self.programs.remove(name);
         anyhow::Ok(())
     }
 
