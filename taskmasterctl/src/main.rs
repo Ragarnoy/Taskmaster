@@ -84,13 +84,15 @@ fn main() -> Result<()> {
         Some(Command::Shutdown) => "shutdown".to_string(),
         None => "".to_string(),
         Some(Command::Load { path }) => {
-            Path::new(&path)
+            Path::new(&path.canonicalize().context("Invalid path")?)
                 .exists()
                 .then_some(())
                 .ok_or_else(|| anyhow::anyhow!("Invalid path"))?;
             format!(
                 "load {}",
-                path.to_str()
+                path.canonicalize()
+                    .unwrap()
+                    .to_str()
                     .context("Could not convert path to string/Invalid path")?
             )
         }

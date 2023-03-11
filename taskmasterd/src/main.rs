@@ -14,6 +14,7 @@ use jobs::Jobs;
 use listener::Action;
 use signal_hook::consts::signal::{SIGHUP, SIGTERM};
 use std::fs;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -81,7 +82,7 @@ pub fn main_loop() -> Result<()> {
                     break;
                 }
                 Action::Load(path) => {
-                    let new_jobs: Jobs = job::load_config(&path)?;
+                    let new_jobs: Jobs = job::load_config_file(PathBuf::from(path))?;
                     jobs.load_new_config(new_jobs).context("Jobs load failed")?;
                 }
             }
