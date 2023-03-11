@@ -13,7 +13,7 @@ use clap::Parser;
 use dirs::home_dir;
 use jobs::Jobs;
 use listener::Action;
-use signal_hook::consts::signal::{SIGHUP, SIGTERM};
+use signal_hook::consts::signal::{SIGHUP, SIGINT, SIGQUIT, SIGTERM};
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -36,6 +36,10 @@ fn create_signal_handler() -> Result<(Arc<AtomicBool>, Arc<AtomicBool>)> {
     signal_hook::flag::register(SIGHUP, Arc::clone(&hup))
         .context("Failed to register SIGHUP handler")?;
     signal_hook::flag::register(SIGTERM, Arc::clone(&term))
+        .context("Failed to register SIGTERM handler")?;
+    signal_hook::flag::register(SIGINT, Arc::clone(&term))
+        .context("Failed to register SIGTERM handler")?;
+    signal_hook::flag::register(SIGQUIT, Arc::clone(&term))
         .context("Failed to register SIGTERM handler")?;
     Ok((hup, term))
 }
