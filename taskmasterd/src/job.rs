@@ -1,6 +1,6 @@
-use crate::job::jobconfig::JobConfig;
-use crate::job::process::{Process, State};
 use anyhow::{Context, Ok, Result};
+use jobconfig::JobConfig;
+use process::{Process, State};
 use serde::Deserialize;
 
 use crate::jobs::Jobs;
