@@ -47,26 +47,50 @@ pub enum State {
     },
 }
 
-impl Display for State {
+impl Display for RunningStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            State::Stopped(fatal) => match fatal {
-                StoppedStatus::Backoff {
-                    tries: restarts,
-                    started_at: start,
-                } => write!(
-                    f,
-                    "BACKOFF (restarts: {}, since: {})",
-                    restarts,
-                    start.elapsed().as_secs()
-                ),
-                StoppedStatus::Fatal => write!(f, "FATAL"),
-                StoppedStatus::Unexpected => write!(f, "UNEXPECTED"),
-                StoppedStatus::Exited => write!(f, "EXITED"),
-                StoppedStatus::Stopped => write!(f, "STOPPED"),
-            },
+            RunningStatus::Running => write!(f, "RUNNING"),
+            RunningStatus::StartRequested { start, tries } => write!(
+                f,
+                "START_REQUESTED (tries: {}, since: {})",
+                tries,
+                start.elapsed().as_secs()
+            ),
+            RunningStatus::StopRequested(start) => {
+                write!(f, "STOP_REQUESTED (since: {})", start.elapsed().as_secs())
+            }
+        }
+    }
+}
+
+impl Display for StoppedStatus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StoppedStatus::Backoff {
+                tries: restarts,
+                started_at: start,
+            } => write!(
+                f,
+                "BACKOFF (restarts: {}, since: {})",
+                restarts,
+                start.elapsed().as_secs()
+            ),
+            StoppedStatus::Fatal => write!(f, "FATAL"),
+            StoppedStatus::Unexpected => write!(f, "UNEXPECTED"),
+            StoppedStatus::Exited => write!(f, "EXITED"),
+            StoppedStatus::Stopped => write!(f, "STOPPED"),
+        }
+    }
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let width = 10;
+        match self {
+            State::Stopped(fatal) => write!(f, "pid: {:>width$} - {}", "N/A", fatal),
             State::Running { pid, status, .. } => {
-                write!(f, "RUNNING (pid: {}, status: {:?})", pid, status)
+                write!(f, "pid: {:>width$} - {}", pid, status)
             }
         }
     }
