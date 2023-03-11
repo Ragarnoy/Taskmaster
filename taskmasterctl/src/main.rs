@@ -102,8 +102,13 @@ fn main() -> Result<()> {
         let socket_path = home_dir()
             .context("Could not get home directory")?
             .join(SOCKET_PATH);
-        let mut unix_stream =
-            UnixStream::connect(socket_path).context("Could not create stream")?;
+        let mut unix_stream = if let Ok(unix_stream) = UnixStream::connect(socket_path) {
+            unix_stream
+        } else {
+            return Err(anyhow::anyhow!(
+                "Could not connect to the daemon, is it running?"
+            ));
+        };
         write_request_and_shutdown(&mut unix_stream, message)?;
         read_from_stream(&mut unix_stream)?;
     }
