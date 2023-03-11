@@ -6,6 +6,6 @@ pub struct NumProcs(pub NonZeroU32);
 
 impl Default for NumProcs {
     fn default() -> Self {
-        Self(NonZeroU32::new(1).unwrap())
+        Self(NonZeroU32::new(1).expect("1 should not be 0"))
     }
 }
