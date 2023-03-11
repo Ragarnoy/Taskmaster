@@ -19,7 +19,7 @@ impl Jobs {
             .iter()
             .filter(|(name, jobs)| {
                 !new_jobs.programs.contains_key(*name)
-                    || jobs.config != new_jobs.programs[*name].config
+                    || *jobs != &new_jobs.programs[*name]
             })
             .map(|(name, _)| name.clone())
             .collect::<Vec<String>>();
@@ -28,7 +28,7 @@ impl Jobs {
             .programs
             .into_iter()
             .filter(|(name, jobs)| {
-                !self.programs.contains_key(name) || self.programs[name].config != jobs.config
+                !self.programs.contains_key(name) || self.programs[name] != *jobs
             })
             .collect::<Vec<(String, Job)>>();
 
@@ -40,7 +40,7 @@ impl Jobs {
             self.programs.insert(name, job);
         }
         self.auto_start()?;
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn auto_start(&mut self) -> Result<()> {
