@@ -11,7 +11,7 @@ use clap::*;
 use dirs::home_dir;
 use job::Jobs;
 use listener::Action;
-use signal_hook::consts::signal::SIGHUP;
+use signal_hook::consts::signal::{SIGHUP, SIGTERM};
 use std::fs;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -27,11 +27,14 @@ struct Opts {
     nodaemon: bool,
 }
 
-fn create_signal_handler() -> Result<Arc<AtomicBool>> {
+fn create_signal_handler() -> Result<(Arc<AtomicBool>, Arc<AtomicBool>)> {
+    let hup = Arc::new(AtomicBool::new(false));
     let term = Arc::new(AtomicBool::new(false));
-    signal_hook::flag::register(SIGHUP, Arc::clone(&term))
+    signal_hook::flag::register(SIGHUP, Arc::clone(&hup))
         .context("Failed to register SIGHUP handler")?;
-    Ok(term)
+    signal_hook::flag::register(SIGTERM, Arc::clone(&term))
+        .context("Failed to register SIGTERM handler")?;
+    Ok((hup, term))
 }
 
 fn get_jobs() -> Result<Jobs> {
@@ -48,12 +51,17 @@ pub fn main_loop() -> Result<()> {
         .join(SOCKET_PATH);
     eprintln!("Socket path: {:?}", socket_path);
     let socket = Socket::new(socket_path.to_str().unwrap())?;
-    let term = create_signal_handler()?;
+    let (hup, term) = create_signal_handler()?;
     let mut jobs = get_jobs()?;
     let mut response = String::new();
     let mut sleeper = Sleeper::new(100)?;
     jobs.auto_start().context("Jobs auto-start failed")?;
     while !term.load(Ordering::Relaxed) {
+        if hup.load(Ordering::Relaxed) {
+            jobs = get_jobs()?;
+            jobs.auto_start().context("Jobs auto-start failed")?;
+            hup.store(false, Ordering::Relaxed);
+        }
         if let Some(stream) = socket.read(&mut response)? {
             let action = Action::from_str(&response)?;
             match action {
