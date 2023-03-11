@@ -1,7 +1,8 @@
-use crate::job::{find_config, load_config_file, Job};
+use crate::job::{find_config, Job};
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct Jobs {
@@ -166,4 +167,10 @@ impl Jobs {
     pub fn clear_jobs(&mut self) {
         self.programs.clear();
     }
+}
+
+pub fn load_config_file(path: PathBuf) -> Result<Jobs> {
+    let file = std::fs::File::open(path)?;
+    let jobs: Jobs = serde_yaml::from_reader(file)?;
+    anyhow::Ok(jobs)
 }

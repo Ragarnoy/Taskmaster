@@ -3,7 +3,6 @@ use jobconfig::JobConfig;
 use process::{Process, State};
 use serde::Deserialize;
 
-use crate::jobs::Jobs;
 use std::path::PathBuf;
 
 pub mod jobconfig;
@@ -146,20 +145,10 @@ pub fn find_config() -> Option<PathBuf> {
     None
 }
 
-pub fn load_config_file(path: PathBuf) -> Result<Jobs> {
-    let file = std::fs::File::open(path)?;
-    let jobs: Jobs = serde_yaml::from_reader(file)?;
-    Ok(jobs)
-}
-
-pub fn load_config(str: &str) -> Result<Jobs> {
-    let jobs: Jobs = serde_yaml::from_str(str)?;
-    Ok(jobs)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jobs::{load_config_file, Jobs};
 
     const CONFIG_EXAMPLE: &str = r#"
     programs:
@@ -186,8 +175,8 @@ mod tests {
 
     #[test]
     fn test_config_diff() {
-        let jobs = load_config(CONFIG_EXAMPLE).unwrap();
-        let new_jobs = load_config(CONFIG_EXAMPLE).unwrap();
+        let jobs: Jobs = serde_yaml::from_str(CONFIG_EXAMPLE).unwrap();
+        let new_jobs: Jobs = serde_yaml::from_str(CONFIG_EXAMPLE).unwrap();
         assert_eq!(jobs.programs, new_jobs.programs);
     }
 
@@ -205,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_load_config() {
-        let jobs = load_config(CONFIG_EXAMPLE).unwrap();
+        let jobs: Jobs = serde_yaml::from_str(CONFIG_EXAMPLE).unwrap();
         assert_eq!(jobs.programs.len(), 1);
     }
 }
