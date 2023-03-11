@@ -18,8 +18,7 @@ impl Jobs {
             .programs
             .iter()
             .filter(|(name, jobs)| {
-                !new_jobs.programs.contains_key(*name)
-                    || *jobs != &new_jobs.programs[*name]
+                !new_jobs.programs.contains_key(*name) || *jobs != &new_jobs.programs[*name]
             })
             .map(|(name, _)| name.clone())
             .collect::<Vec<String>>();
