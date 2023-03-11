@@ -5,7 +5,6 @@ mod listener;
 mod sleeper;
 mod socket;
 
-use crate::job::find_config;
 use crate::jobs::load_config_file;
 use crate::sleeper::Sleeper;
 use crate::socket::Socket;
@@ -41,21 +40,13 @@ fn create_signal_handler() -> Result<(Arc<AtomicBool>, Arc<AtomicBool>)> {
     Ok((hup, term))
 }
 
-fn get_jobs() -> Result<Jobs> {
-    let jobs = match find_config() {
-        Some(path) => load_config_file(path).context("Failed to load config file")?,
-        None => Jobs::default(),
-    };
-    Ok(jobs)
-}
-
 pub fn main_loop() -> Result<()> {
     let socket_path = home_dir()
         .context("could not find home directory")?
         .join(SOCKET_PATH);
     let socket = Socket::new(&socket_path)?;
     let (hup, term) = create_signal_handler()?;
-    let mut jobs = get_jobs()?;
+    let mut jobs = Jobs::new().context("Jobs creation failed")?;
     let mut response = String::new();
     let mut sleeper = Sleeper::new(100)?;
     jobs.auto_start().context("Jobs auto-start failed")?;
@@ -76,15 +67,13 @@ pub fn main_loop() -> Result<()> {
                 }
                 Action::Reload => {
                     jobs.reload().context("Jobs reload failed")?;
-                    jobs = get_jobs()?;
-                    jobs.auto_start().context("Jobs auto-start failed")?;
                 }
                 Action::Shutdown => {
                     break;
                 }
                 Action::Load(path) => {
                     if let Ok(new_jobs) = load_config_file(PathBuf::from(path.clone())) {
-                        jobs.load_new_config(new_jobs).context("Jobs load failed")?;
+                        jobs.load_new_jobs(new_jobs).context("Jobs load failed")?;
                     } else {
                         // if the config file is invalid, we keep the old one
                         socket.write("Invalid config file", stream)?;

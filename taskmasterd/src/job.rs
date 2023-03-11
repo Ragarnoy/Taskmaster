@@ -152,6 +152,7 @@ pub fn find_config() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jobs::{load_config_file, Jobs};
 
     const CONFIG_EXAMPLE: &str = r#"
     programs:

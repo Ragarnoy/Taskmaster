@@ -10,7 +10,15 @@ pub struct Jobs {
 }
 
 impl Jobs {
-    pub fn load_new_config(&mut self, new_jobs: Jobs) -> Result<()> {
+    pub fn new() -> Result<Jobs> {
+        let jobs = match find_config() {
+            Some(path) => load_config_file(path).context("Failed to load config file")?,
+            None => Jobs::default(),
+        };
+        Ok(jobs)
+    }
+
+    pub fn load_new_jobs(&mut self, new_jobs: Jobs) -> Result<()> {
         // if job is in new config, and is not equal to old config, update it and restart it
         // if job is in new config but not in old config, insert it
         // if job is in old config but not in new config, remove it
@@ -141,6 +149,8 @@ impl Jobs {
         self.stop_all()?;
         self.try_wait_job_stop()?;
         self.clear_jobs();
+        *self = Jobs::new().context("Failed to load new config")?;
+        self.auto_start().context("Jobs auto-start failed")?;
         Ok(())
     }
 
@@ -179,6 +189,7 @@ impl Jobs {
 
 pub fn load_config_file(path: PathBuf) -> Result<Jobs> {
     let file = std::fs::File::open(path)?;
-    let jobs: Jobs = serde_yaml::from_reader(file)?;
-    anyhow::Ok(jobs)
+    let mut jobs: Jobs = serde_yaml::from_reader(file)?;
+    jobs.init()?;
+    Ok(jobs)
 }
