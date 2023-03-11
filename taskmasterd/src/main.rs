@@ -1,5 +1,6 @@
 mod daemon;
 mod job;
+mod jobs;
 mod listener;
 mod sleeper;
 mod socket;
@@ -9,7 +10,7 @@ use crate::socket::Socket;
 use anyhow::{Context, Result};
 use clap::*;
 use dirs::home_dir;
-use job::Jobs;
+use jobs::Jobs;
 use listener::Action;
 use signal_hook::consts::signal::{SIGHUP, SIGTERM};
 use std::fs;
@@ -72,6 +73,7 @@ pub fn main_loop() -> Result<()> {
                     socket.write(&status, stream)?;
                 }
                 Action::Reload => {
+                    jobs.reload().context("Jobs reload failed")?;
                     jobs = get_jobs()?;
                     jobs.auto_start().context("Jobs auto-start failed")?;
                 }
@@ -86,11 +88,16 @@ pub fn main_loop() -> Result<()> {
     }
     println!("Shutting down");
     jobs.stop_all().context("Jobs stop failed")?;
+    try_wait_processes_end(&mut jobs, &mut sleeper)?;
+    println!("All jobs stopped");
+    Ok(())
+}
+
+fn try_wait_processes_end(jobs: &mut Jobs, sleeper: &mut Sleeper) -> Result<()> {
     while jobs.programs.iter().any(|p| p.1.is_running()) {
         jobs.check_status().context("Jobs status check failed")?;
         sleeper.sleep()?;
     }
-    println!("All jobs stopped");
     Ok(())
 }
 
