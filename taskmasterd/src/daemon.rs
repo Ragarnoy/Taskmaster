@@ -13,8 +13,8 @@ fn hook(_ppid: i32, _cpid: i32) {
 }
 
 pub fn init() -> Result<()> {
-    let stdout_path = home_dir().unwrap().join(STDOUT_FILE);
-    let stderr_path = home_dir().unwrap().join(STDERR_FILE);
+    let stdout_path = home_dir()?.join(STDOUT_FILE);
+    let stderr_path = home_dir()?.join(STDERR_FILE);
     let stdout = std::fs::File::create(stdout_path).context("could not create stdout file")?;
     let stderr = std::fs::File::create(stderr_path).context("could not create stderr file")?;
     Daemon::new()

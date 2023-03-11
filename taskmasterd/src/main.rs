@@ -86,7 +86,7 @@ pub fn main_loop() -> Result<()> {
 fn main() -> Result<()> {
     let opts = Opts::parse();
     // create a directory for the tmp files if it doesn't exist
-    let path = home_dir().unwrap().join(FILES_DIR);
+    let path = home_dir()?.join(FILES_DIR);
     fs::create_dir_all(path).context("could not create files directory")?;
     if opts.nodaemon {
         main_loop()?;
