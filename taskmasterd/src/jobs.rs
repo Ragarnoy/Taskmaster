@@ -10,7 +10,15 @@ pub struct Jobs {
 }
 
 impl Jobs {
-    pub fn load_new_config(&mut self, new_jobs: Jobs) -> Result<()> {
+    pub fn new() -> Result<Jobs> {
+        let jobs = match find_config() {
+            Some(path) => load_config_file(path).context("Failed to load config file")?,
+            None => Jobs::default(),
+        };
+        Ok(jobs)
+    }
+
+    pub fn load_new_jobs(&mut self, new_jobs: Jobs) -> Result<()> {
         // if job is in new config, and is not equal to old config, update it and restart it
         // if job is in new config but not in old config, insert it
         // if job is in old config but not in new config, remove it
@@ -53,21 +61,29 @@ impl Jobs {
 
     pub fn status(&self, name: &str) -> Result<String> {
         if name.is_empty() {
-            return self.status_all();
+            Ok(self.status_all())
         } else if let Some(job) = self.programs.get(name) {
-            return Ok(job.print_status());
+            Ok(job.print_status())
+        } else {
+            Err(anyhow!("Job {} not found", name))
         }
-        Err(anyhow!("Job {} not found", name))
     }
 
-    pub fn status_all(&self) -> Result<String> {
+    pub fn status_all(&self) -> String {
         let mut status = String::new();
         for (name, job) in self.programs.iter() {
             status.push_str(format!("Job status {}:\n", name).as_str());
             status.push_str(&job.print_status());
             status.push('\n');
         }
-        Ok(status)
+        status
+    }
+
+    pub fn init(&mut self) -> Result<()> {
+        self.programs
+            .iter_mut()
+            .try_for_each(|(name, job)| job.init(name))?;
+        Ok(())
     }
 
     pub fn start(&mut self, name: &str) -> Result<()> {
@@ -133,6 +149,8 @@ impl Jobs {
         self.stop_all()?;
         self.try_wait_job_stop()?;
         self.clear_jobs();
+        *self = Jobs::new().context("Failed to load new config")?;
+        self.auto_start().context("Jobs auto-start failed")?;
         Ok(())
     }
 
@@ -148,7 +166,7 @@ impl Jobs {
     }
 
     fn try_wait_job_stop(&mut self) -> Result<()> {
-        while self.programs.values().any(|j| j.is_running()) {
+        while self.programs.values().any(Job::is_running) {
             self.check_status()?;
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
@@ -171,6 +189,7 @@ impl Jobs {
 
 pub fn load_config_file(path: PathBuf) -> Result<Jobs> {
     let file = std::fs::File::open(path)?;
-    let jobs: Jobs = serde_yaml::from_reader(file)?;
-    anyhow::Ok(jobs)
+    let mut jobs: Jobs = serde_yaml::from_reader(file)?;
+    jobs.init()?;
+    Ok(jobs)
 }

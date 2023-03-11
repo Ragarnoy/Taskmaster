@@ -28,15 +28,19 @@ impl PartialEq for Job {
 impl Eq for Job {}
 
 impl Job {
-    pub fn start(&mut self, name: &str) -> Result<()> {
+    pub fn init(&mut self, name: &str) -> Result<()> {
         for i in 0..self.config.numprocs.0.into() {
-            let name = format!("{}-{}", name, i);
-            let mut process = Process::new(name.clone(), &self.config)
-                .with_context(|| format!("Failed to create process {}", name))?;
+            let process = Process::new(format!("{}-{}", name, i), &self.config);
+            self.processes.push(process);
+        }
+        Ok(())
+    }
+
+    pub fn start(&mut self, name: &str) -> Result<()> {
+        for process in self.processes.iter_mut() {
             process
                 .start()
                 .with_context(|| format!("Failed to start process {}", name))?;
-            self.processes.push(process);
         }
         Ok(())
     }
