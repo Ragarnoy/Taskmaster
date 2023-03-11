@@ -1,7 +1,7 @@
 use crate::job::jobconfig::stopsignal::StopSignal;
 use crate::job::jobconfig::umask::Umask;
 use crate::job::jobconfig::JobConfig;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use nix::sys::signal::Signal;
 use nix::sys::stat::{umask, Mode};
 use nix::unistd::Pid;
@@ -139,8 +139,6 @@ impl Process {
         if let State::Running { pid, status, .. } = &mut self.state {
             nix::sys::signal::kill(*pid, Signal::from(stop_signal))?;
             *status = RunningStatus::StopRequested(Instant::now());
-        } else {
-            return Err(anyhow!(StopError::NotRunning));
         }
         Ok(())
     }
