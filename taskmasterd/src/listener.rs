@@ -5,6 +5,7 @@ pub enum Action {
     Stop(String),
     Restart(String),
     Status(String),
+    Load(String),
     Reload,
     Shutdown,
 }
@@ -23,6 +24,7 @@ impl FromStr for Action {
             "stop" => Ok(Action::Stop(name.to_string())),
             "restart" => Ok(Action::Restart(name.to_string())),
             "status" => Ok(Action::Status(name.to_string())),
+            "load" => Ok(Action::Load(name.to_string())),
             "reload" => Ok(Action::Reload),
             "shutdown" => Ok(Action::Shutdown),
             _ => Err(anyhow::anyhow!("Invalid action")),

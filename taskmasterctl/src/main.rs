@@ -3,6 +3,7 @@ use clap::*;
 use dirs::home_dir;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
+use std::path::{Path, PathBuf};
 
 const SOCKET_PATH: &str = ".taskmasterd/taskmasterd.sock";
 
@@ -37,6 +38,10 @@ enum Command {
     Status {
         /// The name of the processes to get the status of, or all if not specified
         name: Vec<String>,
+    },
+    Load {
+        /// The path to the configuration file
+        path: PathBuf,
     },
     /// Reload the configuration
     Reload,
@@ -78,6 +83,17 @@ fn main() -> Result<()> {
         Some(Command::Reload) => "reload".to_string(),
         Some(Command::Shutdown) => "shutdown".to_string(),
         None => "".to_string(),
+        Some(Command::Load { path }) => {
+            Path::new(&path)
+                .exists()
+                .then_some(())
+                .ok_or_else(|| anyhow::anyhow!("Invalid path"))?;
+            format!(
+                "load {}",
+                path.to_str()
+                    .context("Could not convert path to string/Invalid path")?
+            )
+        }
     };
     if !message.is_empty() {
         let socket_path = home_dir()
