@@ -46,7 +46,6 @@ pub fn main_loop() -> Result<()> {
     let socket_path = home_dir()
         .context("could not find home directory")?
         .join(SOCKET_PATH);
-    eprintln!("Socket path: {:?}", socket_path);
     let socket = Socket::new(socket_path.to_str().unwrap())?;
     let term = create_signal_handler()?;
     let mut jobs = get_jobs()?;

@@ -7,10 +7,10 @@ edition.workspace = true
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
+dirs.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 log = "0.4"
 signal-hook = "0.3"
 daemonize-me = "2.0"
 nix = { version = "0.26", features = ["fs"] }
-dirs = "4.0.0"
