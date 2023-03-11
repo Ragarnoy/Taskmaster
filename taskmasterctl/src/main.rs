@@ -39,6 +39,7 @@ enum Command {
         /// The name of the processes to get the status of, or all if not specified
         name: Vec<String>,
     },
+    /// Load a configuration file
     Load {
         /// The path to the configuration file
         path: PathBuf,
