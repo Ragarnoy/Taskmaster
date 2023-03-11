@@ -1,6 +1,6 @@
 use crate::job::jobconfig::JobConfig;
 use crate::job::process::{Process, State};
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{anyhow, Context, Ok, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -146,8 +146,11 @@ impl Job {
     pub fn start(&mut self, name: &str) -> Result<()> {
         for i in 0..self.config.numprocs.0.into() {
             let name = format!("{}-{}", name, i);
-            let mut process = Process::new(name.clone(), &self.config)?;
-            process.start()?;
+            let mut process = Process::new(name.clone(), &self.config)
+                .with_context(|| format!("Failed to create process {}", name))?;
+            process
+                .start()
+                .with_context(|| format!("Failed to start process {}", name))?;
             self.processes.push(process);
         }
         Ok(())

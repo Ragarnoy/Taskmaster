@@ -1,10 +1,10 @@
 use crate::main_loop;
 use anyhow::{Context, Result};
 use daemonize_me::Daemon;
+use dirs::home_dir;
 
-// const PID_FILE: &str = "/tmp/taskmasterd/taskmasterd.pid";
-const STDOUT_FILE: &str = "/tmp/taskmasterd/taskmasterd.stdout";
-const STDERR_FILE: &str = "/tmp/taskmasterd/taskmasterd.stderr";
+const STDOUT_FILE: &str = ".taskmasterd/taskmasterd.stdout";
+const STDERR_FILE: &str = ".taskmasterd/taskmasterd.stderr";
 
 fn hook(_ppid: i32, _cpid: i32) {
     if let Err(e) = main_loop() {
@@ -13,8 +13,14 @@ fn hook(_ppid: i32, _cpid: i32) {
 }
 
 pub fn init() -> Result<()> {
-    let stdout = std::fs::File::create(STDOUT_FILE).context("could not create stdout file")?;
-    let stderr = std::fs::File::create(STDERR_FILE).context("could not create stderr file")?;
+    let stdout_path = home_dir()
+        .context("could not find home dir")?
+        .join(STDOUT_FILE);
+    let stderr_path = home_dir()
+        .context("could not find home dir")?
+        .join(STDERR_FILE);
+    let stdout = std::fs::File::create(stdout_path).context("could not create stdout file")?;
+    let stderr = std::fs::File::create(stderr_path).context("could not create stderr file")?;
     Daemon::new()
         .umask(0o777)
         //.pid_file(PID_FILE, None)

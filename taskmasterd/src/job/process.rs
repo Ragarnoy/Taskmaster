@@ -5,7 +5,6 @@ use anyhow::Result;
 use nix::sys::signal::Signal;
 use nix::sys::stat::{umask, Mode};
 use nix::unistd::Pid;
-use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::process::{Child, Command};
 use std::time::Instant;
@@ -212,44 +211,6 @@ impl Display for Process {
         writeln!(f, "{}: {}", self.name, self.state)
     }
 }
-
-#[derive(Debug)]
-pub enum CheckStatusError {
-    NoChildProcess,
-    TryWaitError,
-}
-
-impl Display for CheckStatusError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CheckStatusError::NoChildProcess => {
-                write!(f, "No child process")
-            }
-            CheckStatusError::TryWaitError => {
-                write!(f, "Try wait error")
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum StopError {
-    NotRunning,
-}
-
-impl Display for StopError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StopError::NotRunning => {
-                write!(f, "Process is not running")
-            }
-        }
-    }
-}
-
-impl Error for StopError {}
-
-impl Error for CheckStatusError {}
 
 impl Drop for Process {
     fn drop(&mut self) {

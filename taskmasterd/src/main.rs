@@ -8,6 +8,7 @@ use crate::sleeper::Sleeper;
 use crate::socket::Socket;
 use anyhow::{Context, Result};
 use clap::*;
+use dirs::home_dir;
 use job::Jobs;
 use listener::Action;
 use signal_hook::consts::signal::SIGHUP;
@@ -16,8 +17,8 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-pub const FILES_DIR: &str = "/tmp/taskmasterd";
-const SOCKET_PATH: &str = "/tmp/taskmasterd/taskmasterd.sock";
+pub const FILES_DIR: &str = ".taskmasterd";
+const SOCKET_PATH: &str = ".taskmasterd/taskmasterd.sock";
 
 #[derive(Parser)]
 #[command(version, author, about)]
@@ -42,7 +43,11 @@ fn get_jobs() -> Result<Jobs> {
 }
 
 pub fn main_loop() -> Result<()> {
-    let socket = Socket::new(SOCKET_PATH)?;
+    let socket_path = home_dir()
+        .context("could not find home directory")?
+        .join(SOCKET_PATH);
+    eprintln!("Socket path: {:?}", socket_path);
+    let socket = Socket::new(socket_path.to_str().unwrap())?;
     let term = create_signal_handler()?;
     let mut jobs = get_jobs()?;
     let mut response = String::new();
@@ -85,7 +90,10 @@ pub fn main_loop() -> Result<()> {
 fn main() -> Result<()> {
     let opts = Opts::parse();
     // create a directory for the tmp files if it doesn't exist
-    fs::create_dir_all(FILES_DIR).context("could not create files directory")?;
+    let path = home_dir()
+        .context("could not find home directory")?
+        .join(FILES_DIR);
+    fs::create_dir_all(path).context("could not create files directory")?;
     if opts.nodaemon {
         main_loop()?;
     } else {

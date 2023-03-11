@@ -18,7 +18,7 @@ impl Socket {
             .with_context(|| format!("could not bind to socket at {:?}", path))?;
         listener
             .set_nonblocking(true)
-            .context("could not set non-blocking mode on socket")?;
+            .with_context(|| format!("could not set socket to non-blocking at {:?}", path))?;
         Ok(Self { listener })
     }
 
