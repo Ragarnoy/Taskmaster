@@ -1,5 +1,5 @@
 use crate::job::jobconfig::JobConfig;
-use crate::job::process::Process;
+use crate::job::process::{Process, State};
 use anyhow::{anyhow, Ok, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -172,39 +172,57 @@ impl Job {
     }
 
     pub fn check_status(&mut self) -> Result<()> {
-        use crate::job::process::CheckStatusError;
-
+        use crate::job::jobconfig::autorestart::*;
         for process in self.processes.iter_mut() {
-            let status = process.check_status(&self.config);
-            match status {
-                Err(e) => {
-                    if let CheckStatusError::NoChildProcess =
-                        e.downcast_ref::<CheckStatusError>().unwrap()
-                    {
-                        continue;
-                    } else {
-                        return Err(e);
-                    }
-                }
-                Result::Ok(status) => {
-                    if let Some(fatal) = status {
-                        use crate::job::jobconfig::autorestart::*;
-                        match self.config.autorestart {
-                            AutoRestart::True => {
-                                process.start()?;
-                            }
-                            AutoRestart::Unexpected => {
-                                if fatal {
-                                    process.start()?;
-                                }
-                            }
-                            AutoRestart::False => (),
+            process.update_status(&self.config)?;
+            match &mut process.state {
+                State::Stopped(status) => match status {
+                    process::StoppedStatus::Backoff { tries, started_at } => {
+                        if started_at.elapsed().as_secs() >= (*tries).into() {
+                            println!("{}: backoff expired, restart", process.name);
+                            process.start()?;
                         }
                     }
-                }
+                    process::StoppedStatus::Unexpected => {
+                        // if autorestart is at true or unexpected, restart
+                        if self.config.autorestart == AutoRestart::True
+                            || self.config.autorestart == AutoRestart::Unexpected
+                        {
+                            println!("{}: unexpected exit, restart", process.name);
+                            process.start()?;
+                        } else {
+                            println!("{}: unexpected exit", process.name);
+                        }
+                    }
+                    process::StoppedStatus::Exited => {
+                        if self.config.autorestart == AutoRestart::True {
+                            println!("{}: exited, restart", process.name);
+                            process.start()?;
+                        }
+                    }
+                    process::StoppedStatus::Fatal => {}
+                    process::StoppedStatus::Stopped => {}
+                },
+                State::Running { status, .. } => match status {
+                    process::RunningStatus::StopRequested(since) => {
+                        if since.elapsed().as_secs() >= self.config.stoptimeout.0 {
+                            println!("{}: stop timeout expired, kill", process.name);
+                            process.kill()?;
+                        }
+                    }
+                    process::RunningStatus::StartRequested { start, .. } => {
+                        if start.elapsed().as_secs() >= self.config.starttime.0 {
+                            println!(
+                                "{}: start period ended ({}s)",
+                                process.name, self.config.starttime.0
+                            );
+                            *status = process::RunningStatus::Running;
+                        }
+                    }
+                    process::RunningStatus::Running => {}
+                },
             }
         }
-        self.processes.retain(|p| p.is_running());
         Ok(())
     }
 

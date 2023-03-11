@@ -39,7 +39,7 @@ pub struct JobConfig {
     #[serde(default)]
     pub stoptimeout: StopTimeout,
     #[serde(default)]
-    pub starttimeout: StartTimeout,
+    pub starttime: StartTimeout,
     #[serde(default)]
     pub stopsignal: StopSignal,
     pub stdout: Option<PathBuf>,

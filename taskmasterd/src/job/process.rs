@@ -14,15 +14,34 @@ use std::time::Instant;
 #[derive(Debug, Clone, Copy)]
 pub enum RunningStatus {
     Running,
-    StartRequested(Instant),
+    StartRequested { start: Instant, tries: u32 },
     StopRequested(Instant),
 }
 
-type Fatal = bool;
+/// Status of a stopped process
+#[derive(Debug, Default)]
+pub enum StoppedStatus {
+    /// Process exited before being fully started
+    Backoff {
+        /// Number of times the process has been restarted
+        tries: u32,
+        /// Time at which the process was put in backoff
+        started_at: Instant,
+    },
+    /// Process could not be started
+    Fatal,
+    /// Process exited unexpectedly
+    Unexpected,
+    /// Process exited safely
+    Exited,
+    /// Process was stopped or never started
+    #[default]
+    Stopped,
+}
 
 #[derive(Debug)]
-enum State {
-    Stopped(Fatal),
+pub enum State {
+    Stopped(StoppedStatus),
     Running {
         pid: Pid,
         child: Child,
@@ -33,13 +52,21 @@ enum State {
 impl Display for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            State::Stopped(fatal) => {
-                if *fatal {
-                    write!(f, "FATAL")
-                } else {
-                    write!(f, "STOPPED")
-                }
-            }
+            State::Stopped(fatal) => match fatal {
+                StoppedStatus::Backoff {
+                    tries: restarts,
+                    started_at: start,
+                } => write!(
+                    f,
+                    "BACKOFF (restarts: {}, since: {})",
+                    restarts,
+                    start.elapsed().as_secs()
+                ),
+                StoppedStatus::Fatal => write!(f, "FATAL"),
+                StoppedStatus::Unexpected => write!(f, "UNEXPECTED"),
+                StoppedStatus::Exited => write!(f, "EXITED"),
+                StoppedStatus::Stopped => write!(f, "STOPPED"),
+            },
             State::Running { pid, status, .. } => {
                 write!(f, "RUNNING (pid: {}, status: {:?})", pid, status)
             }
@@ -49,7 +76,7 @@ impl Display for State {
 
 impl Default for State {
     fn default() -> Self {
-        Self::Stopped(false)
+        Self::Stopped(StoppedStatus::default())
     }
 }
 
@@ -58,7 +85,7 @@ pub struct Process {
     pub name: String,
     pub command: Command,
     pub umask: Option<Umask>,
-    state: State,
+    pub state: State,
 }
 
 impl Process {
@@ -92,10 +119,18 @@ impl Process {
         // FIXME Needs to be configurable
         umask(Mode::from_bits_truncate(0o022));
 
+        let tries = if let State::Stopped(StoppedStatus::Backoff { tries: t, .. }) = &self.state {
+            *t
+        } else {
+            0
+        };
         self.state = State::Running {
             pid: Pid::from_raw(child.id() as i32),
             child,
-            status: RunningStatus::StartRequested(Instant::now()),
+            status: RunningStatus::StartRequested {
+                start: Instant::now(),
+                tries,
+            },
         };
         Ok(())
     }
@@ -110,43 +145,60 @@ impl Process {
         Ok(())
     }
 
+    /// Kill the process
+    /// This is a shortcut for `stop(StopSignal::Kill)`
+    pub fn kill(&mut self) -> Result<()> {
+        self.stop(StopSignal::Kill)?;
+        self.state = State::Stopped(StoppedStatus::Stopped);
+        // not sure if that's the right way to do it
+        Ok(())
+    }
+
     pub fn restart(&mut self, config: &JobConfig) -> Result<()> {
         self.stop(config.stopsignal)?;
         self.start()?;
         Ok(())
     }
 
-    pub fn check_status(&mut self, config: &JobConfig) -> Result<Option<Fatal>> {
-        match &mut self.state {
-            State::Stopped(_) => Err(anyhow!(CheckStatusError::NoChildProcess)),
-            State::Running { child, status, .. } => match child.try_wait()? {
-                Some(exit_status) => {
-                    let fatal = if let Some(exit_code) = exit_status.code() {
-                        !config.exitcodes.is_valid(exit_code)
-                    } else {
-                        false
-                    };
-                    self.state = State::Stopped(fatal);
-                    Ok(Some(fatal))
-                }
-                None => {
-                    match status {
-                        RunningStatus::StartRequested(start_time) => {
-                            if start_time.elapsed().as_secs() >= config.starttimeout.0 {
-                                *status = RunningStatus::Running;
+    /// Update the process state
+    pub fn update_status(&mut self, config: &JobConfig) -> Result<()> {
+        if let State::Running { child, status, .. } = &mut self.state {
+            if let Some(exit_status) = child.try_wait()? {
+                let expected = if let Some(exit_code) = exit_status.code() {
+                    config.exitcodes.is_valid(exit_code)
+                } else {
+                    true // <== process received a signal, so it exiting is expected
+                };
+                self.state = State::Stopped(match status {
+                    RunningStatus::StartRequested { tries, .. } => {
+                        print!(
+                            "{}: exited before being fully started ({} tries)",
+                            self.name, tries
+                        );
+                        if *tries < config.startretries {
+                            println!(", backing off");
+                            StoppedStatus::Backoff {
+                                tries: *tries + 1,
+                                started_at: Instant::now(),
                             }
+                        } else {
+                            println!(", giving up");
+                            StoppedStatus::Fatal
                         }
-                        RunningStatus::StopRequested(stop_time) => {
-                            if stop_time.elapsed().as_secs() >= config.stoptimeout.0 {
-                                self.stop(StopSignal::Kill)?;
-                            }
-                        }
-                        RunningStatus::Running => {}
                     }
-                    Ok(None)
-                }
-            },
+                    RunningStatus::StopRequested(_) => StoppedStatus::Stopped,
+                    RunningStatus::Running => {
+                        if expected {
+                            println!("{}: exited", self.name);
+                            StoppedStatus::Exited
+                        } else {
+                            StoppedStatus::Unexpected
+                        }
+                    }
+                });
+            }
         }
+        Ok(())
     }
 
     pub fn is_running(&self) -> bool {

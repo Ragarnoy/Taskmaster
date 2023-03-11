@@ -18,7 +18,7 @@ programs:
     env:
       STARTED_BY: taskmaster
       ANSWER: 42
-  failure:
+  test:
     cmd: "./test.sh"
     numprocs: 8
     umask: 077
@@ -27,7 +27,7 @@ programs:
     autorestart: unexpected
     exitcodes: 0
     startretries: 3
-    starttime: 5
+    starttime: 1
     stopsignal: USR1
     stoptime: 10
     stdout: /tmp/vgsworker.stdout
