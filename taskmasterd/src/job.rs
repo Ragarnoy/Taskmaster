@@ -150,7 +150,7 @@ impl Job {
                 .with_context(|| format!("Failed to create process {}", name))?;
             process
                 .start()
-                .context(format!("Failed to start {}", name))?;
+                .with_context(|| format!("Failed to start process {}", name))?;
             self.processes.push(process);
         }
         Ok(())
