@@ -58,9 +58,8 @@ pub fn main_loop() -> Result<()> {
     jobs.auto_start().context("Jobs auto-start failed")?;
     while !term.load(Ordering::Relaxed) {
         if hup.load(Ordering::Relaxed) {
-            jobs = get_jobs()?;
-            jobs.auto_start().context("Jobs auto-start failed")?;
             hup.store(false, Ordering::Relaxed);
+            jobs.reread().context("Jobs reload failed")?;
         }
         if let Some(stream) = socket.read(&mut response)? {
             let action = Action::from_str(&response)?;

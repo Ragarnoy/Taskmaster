@@ -1,6 +1,5 @@
-use crate::job::Job;
-use anyhow::anyhow;
-use anyhow::Result;
+use crate::job::{find_config, load_config_file, Job};
+use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -133,6 +132,17 @@ impl Jobs {
         self.stop_all()?;
         self.try_wait_job_stop()?;
         self.clear_jobs();
+        Ok(())
+    }
+
+    pub fn reread(&mut self) -> Result<()> {
+        println!("Rereading config");
+        self.stop_all()?;
+        let path = find_config().context("Failed to find config")?;
+        let new_jobs = load_config_file(path).context("Failed to load config")?;
+        self.try_wait_job_stop()?;
+        *self = new_jobs;
+        self.auto_start()?;
         Ok(())
     }
 
