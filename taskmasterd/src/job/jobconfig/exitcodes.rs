@@ -20,13 +20,13 @@ impl<'de> Deserialize<'de> for ExitCodes {
         match v {
             Value::Number(x) => Ok(Self(vec![x
                 .as_i64()
-                .ok_or(serde::de::Error::custom("Invalid exit code"))?
+                .ok_or_else(|| serde::de::Error::custom("Invalid exit code"))?
                 as i32])),
             Value::Sequence(x) => Ok(Self(
                 x.iter()
                     .map(|x| {
                         x.as_i64()
-                            .ok_or(serde::de::Error::custom("Invalid exit code"))
+                            .ok_or_else(|| serde::de::Error::custom("Invalid exit code"))
                     })
                     .map(|r: Result<i64, D::Error>| match r {
                         Ok(x) => Ok(x as i32),
