@@ -8,7 +8,7 @@ mod socket;
 use crate::sleeper::Sleeper;
 use crate::socket::Socket;
 use anyhow::{Context, Result};
-use clap::*;
+use clap::Parser;
 use dirs::home_dir;
 use jobs::Jobs;
 use listener::Action;
@@ -41,7 +41,7 @@ fn create_signal_handler() -> Result<(Arc<AtomicBool>, Arc<AtomicBool>)> {
 fn get_jobs() -> Result<Jobs> {
     let jobs = match job::find_config() {
         Some(path) => job::load_config_file(path).context("Failed to load config file")?,
-        None => Default::default(),
+        None => Jobs::default(),
     };
     Ok(jobs)
 }
@@ -50,7 +50,7 @@ pub fn main_loop() -> Result<()> {
     let socket_path = home_dir()
         .context("could not find home directory")?
         .join(SOCKET_PATH);
-    let socket = Socket::new(socket_path.to_str().unwrap())?;
+    let socket = Socket::new(&socket_path)?;
     let (hup, term) = create_signal_handler()?;
     let mut jobs = get_jobs()?;
     let mut response = String::new();

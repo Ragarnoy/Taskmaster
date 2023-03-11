@@ -2,13 +2,14 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
+use std::path::PathBuf;
 
 pub struct Socket {
     listener: UnixListener,
 }
 
 impl Socket {
-    pub fn new(path: &str) -> Result<Self> {
+    pub fn new(path: &PathBuf) -> Result<Self> {
         if fs::metadata(path).is_ok() {
             eprintln!("A socket is already present. Deleting...");
             fs::remove_file(path)

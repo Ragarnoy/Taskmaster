@@ -57,11 +57,11 @@ impl Job {
     }
 
     pub fn is_running(&self) -> bool {
-        self.processes.iter().any(|p| p.is_running())
+        self.processes.iter().any(Process::is_running)
     }
 
     pub fn check_status(&mut self) -> Result<()> {
-        use crate::job::jobconfig::autorestart::*;
+        use crate::job::jobconfig::autorestart::AutoRestart;
         for process in self.processes.iter_mut() {
             process.update_status(&self.config)?;
             match &mut process.state {
@@ -130,7 +130,10 @@ impl Job {
 
 impl Drop for Job {
     fn drop(&mut self) {
-        self.stop().unwrap();
+        assert!(
+            !self.is_running(),
+            "Job processes should be stopped before being dropped"
+        );
     }
 }
 
