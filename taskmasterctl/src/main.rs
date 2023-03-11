@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use clap::*;
+use dirs::home_dir;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
-use dirs::home_dir;
 
 const SOCKET_PATH: &str = ".taskmasterd/taskmasterd.sock";
 
@@ -80,7 +80,9 @@ fn main() -> Result<()> {
         None => "".to_string(),
     };
     if !message.is_empty() {
-        let socket_path = home_dir().context("Could not get home directory")?.join(SOCKET_PATH);
+        let socket_path = home_dir()
+            .context("Could not get home directory")?
+            .join(SOCKET_PATH);
         let mut unix_stream =
             UnixStream::connect(socket_path).context("Could not create stream")?;
         write_request_and_shutdown(&mut unix_stream, message)?;
