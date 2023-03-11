@@ -64,11 +64,6 @@ pub fn main_loop() -> Result<()> {
                     jobs.auto_start().context("Jobs auto-start failed")?;
                 }
                 Action::Shutdown => {
-                    jobs.stop_all().context("Jobs stop failed")?;
-                    while jobs.programs.iter().any(|p| p.1.is_running()) {
-                        jobs.check_status().context("Jobs status check failed")?;
-                        sleeper.sleep()?;
-                    }
                     break;
                 }
             }
@@ -77,6 +72,13 @@ pub fn main_loop() -> Result<()> {
         jobs.check_status().context("Jobs status check failed")?;
         sleeper.sleep()?;
     }
+    println!("Shutting down");
+    jobs.stop_all().context("Jobs stop failed")?;
+    while jobs.programs.iter().any(|p| p.1.is_running()) {
+        jobs.check_status().context("Jobs status check failed")?;
+        sleeper.sleep()?;
+    }
+    println!("All jobs stopped");
     Ok(())
 }
 
