@@ -73,7 +73,7 @@ impl Job {
                     }
                     process::StoppedStatus::Unexpected => {
                         // if autorestart is at true or unexpected, restart
-                        if self.config.autorestart == AutoRestart::True
+                        if self.config.autorestart == AutoRestart::Always
                             || self.config.autorestart == AutoRestart::Unexpected
                         {
                             println!("{}: unexpected exit, restart", process.name);
@@ -83,7 +83,7 @@ impl Job {
                         }
                     }
                     process::StoppedStatus::Exited => {
-                        if self.config.autorestart == AutoRestart::True {
+                        if self.config.autorestart == AutoRestart::Always {
                             println!("{}: exited, restart", process.name);
                             process.start()?;
                         }
