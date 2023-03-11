@@ -53,21 +53,29 @@ impl Jobs {
 
     pub fn status(&self, name: &str) -> Result<String> {
         if name.is_empty() {
-            return self.status_all();
+            Ok(self.status_all())
         } else if let Some(job) = self.programs.get(name) {
-            return Ok(job.print_status());
+            Ok(job.print_status())
+        } else {
+            Err(anyhow!("Job {} not found", name))
         }
-        Err(anyhow!("Job {} not found", name))
     }
 
-    pub fn status_all(&self) -> Result<String> {
+    pub fn status_all(&self) -> String {
         let mut status = String::new();
         for (name, job) in self.programs.iter() {
             status.push_str(format!("Job status {}:\n", name).as_str());
             status.push_str(&job.print_status());
             status.push('\n');
         }
-        Ok(status)
+        status
+    }
+
+    pub fn init(&mut self) -> Result<()> {
+        self.programs
+            .iter_mut()
+            .try_for_each(|(name, job)| job.init(name))?;
+        Ok(())
     }
 
     pub fn start(&mut self, name: &str) -> Result<()> {
@@ -148,7 +156,7 @@ impl Jobs {
     }
 
     fn try_wait_job_stop(&mut self) -> Result<()> {
-        while self.programs.values().any(|j| j.is_running()) {
+        while self.programs.values().any(Job::is_running) {
             self.check_status()?;
             std::thread::sleep(std::time::Duration::from_millis(100));
         }

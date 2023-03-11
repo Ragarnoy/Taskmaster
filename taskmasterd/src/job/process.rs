@@ -1,7 +1,6 @@
 use crate::job::jobconfig::stopsignal::StopSignal;
-use crate::job::jobconfig::umask::Umask;
 use crate::job::jobconfig::JobConfig;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use nix::sys::signal::Signal;
 use nix::sys::stat::{umask, Mode};
 use nix::unistd::Pid;
@@ -82,39 +81,39 @@ impl Default for State {
 #[derive(Debug)]
 pub struct Process {
     pub name: String,
-    pub command: Command,
-    pub umask: Option<Umask>,
     pub state: State,
+    config: JobConfig,
 }
 
 impl Process {
-    pub fn new(name: String, config: &JobConfig) -> Result<Self> {
-        let mut command = Command::new(std::fs::canonicalize(&config.cmd)?);
-        command.current_dir(config.workingdir.0.clone());
-        if let Some(env) = &config.env {
-            command.envs(env.0.iter());
-        }
-        if let Some(stdout) = &config.stdout {
-            command.stdout(std::fs::File::create(stdout)?);
-        }
-        if let Some(stderr) = &config.stderr {
-            command.stderr(std::fs::File::create(stderr)?);
-        }
-
-        Ok(Self {
+    pub fn new(name: String, config: &JobConfig) -> Self {
+        Self {
             name,
-            command,
-            umask: config.umask,
             state: State::default(),
-        })
+            config: config.clone(),
+        }
     }
 
     pub fn start(&mut self) -> Result<()> {
-        if let Some(umask_value) = self.umask {
+        let mut command = Command::new(
+            std::fs::canonicalize(&self.config.cmd).context("Failed to find command")?,
+        );
+        command.current_dir(self.config.workingdir.0.clone());
+        if let Some(env) = &self.config.env {
+            command.envs(env.0.iter());
+        }
+        if let Some(stdout) = &self.config.stdout {
+            command.stdout(std::fs::File::create(stdout).context("Failed to open stdout file")?);
+        }
+        if let Some(stderr) = &self.config.stderr {
+            command.stderr(std::fs::File::create(stderr).context("Failed to open stderr file")?);
+        }
+
+        if let Some(umask_value) = &self.config.umask {
             umask(Mode::from_bits_truncate(umask_value.0));
         }
 
-        let child = self.command.spawn()?;
+        let child = command.spawn()?;
         // FIXME Needs to be configurable
         umask(Mode::from_bits_truncate(0o022));
 
