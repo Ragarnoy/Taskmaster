@@ -48,14 +48,14 @@ impl Jobs {
                 job.start(name)?;
             }
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn status(&self, name: &str) -> Result<String> {
         if name.is_empty() {
             return self.status_all();
         } else if let Some(job) = self.programs.get(name) {
-            return anyhow::Ok(job.print_status());
+            return Ok(job.print_status());
         }
         Err(anyhow!("Job {} not found", name))
     }
@@ -67,7 +67,7 @@ impl Jobs {
             status.push_str(&job.print_status());
             status.push('\n');
         }
-        anyhow::Ok(status)
+        Ok(status)
     }
 
     pub fn start(&mut self, name: &str) -> Result<()> {
@@ -77,14 +77,14 @@ impl Jobs {
         if let Some(job) = self.programs.get_mut(name) {
             job.start(name)?;
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn start_all(&mut self) -> Result<()> {
         for (name, job) in self.programs.iter_mut() {
             job.start(name)?;
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn stop(&mut self, name: &str) -> Result<()> {
@@ -94,14 +94,14 @@ impl Jobs {
         if let Some(job) = self.programs.get_mut(name) {
             job.stop()?;
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn stop_all(&mut self) -> Result<()> {
         for job in self.programs.values_mut() {
             job.stop()?;
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn restart(&mut self, name: &str) -> Result<()> {
@@ -111,21 +111,21 @@ impl Jobs {
         if let Some(job) = self.programs.get_mut(name) {
             job.restart()?;
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn restart_all(&mut self) -> Result<()> {
         for job in self.programs.values_mut() {
             job.restart()?;
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn check_status(&mut self) -> Result<()> {
         for job in self.programs.values_mut() {
             job.check_status()?;
         }
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn reload(&mut self) -> Result<()> {
@@ -133,7 +133,7 @@ impl Jobs {
         self.stop_all()?;
         self.try_wait_job_stop()?;
         self.clear_jobs();
-        anyhow::Ok(())
+        Ok(())
     }
 
     fn try_wait_job_stop(&mut self) -> Result<()> {
@@ -150,7 +150,7 @@ impl Jobs {
         }
         self.try_wait_job_stop()?;
         self.programs.remove(name);
-        anyhow::Ok(())
+        Ok(())
     }
 
     pub fn clear_jobs(&mut self) {
