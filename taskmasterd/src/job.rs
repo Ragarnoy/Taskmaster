@@ -131,7 +131,7 @@ impl Job {
 impl Drop for Job {
     fn drop(&mut self) {
         assert!(
-            self.is_running(),
+            !self.is_running(),
             "Job processes should be stopped before being dropped"
         );
     }
