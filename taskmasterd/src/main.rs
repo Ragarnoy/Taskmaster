@@ -50,7 +50,7 @@ pub fn main_loop() -> Result<()> {
     let socket_path = home_dir()
         .context("could not find home directory")?
         .join(SOCKET_PATH);
-    let socket = Socket::new(socket_path.to_str().unwrap())?;
+    let socket = Socket::new(&socket_path)?;
     let (hup, term) = create_signal_handler()?;
     let mut jobs = get_jobs()?;
     let mut response = String::new();
