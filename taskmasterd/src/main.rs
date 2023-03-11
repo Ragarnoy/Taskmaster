@@ -5,6 +5,8 @@ mod listener;
 mod sleeper;
 mod socket;
 
+use crate::job::find_config;
+use crate::jobs::load_config_file;
 use crate::sleeper::Sleeper;
 use crate::socket::Socket;
 use anyhow::{Context, Result};
@@ -40,8 +42,8 @@ fn create_signal_handler() -> Result<(Arc<AtomicBool>, Arc<AtomicBool>)> {
 }
 
 fn get_jobs() -> Result<Jobs> {
-    let jobs = match job::find_config() {
-        Some(path) => job::load_config_file(path).context("Failed to load config file")?,
+    let jobs = match find_config() {
+        Some(path) => load_config_file(path).context("Failed to load config file")?,
         None => Jobs::default(),
     };
     Ok(jobs)
@@ -81,8 +83,13 @@ pub fn main_loop() -> Result<()> {
                     break;
                 }
                 Action::Load(path) => {
-                    let new_jobs: Jobs = job::load_config_file(PathBuf::from(path))?;
-                    jobs.load_new_config(new_jobs).context("Jobs load failed")?;
+                    if let Ok(new_jobs) = load_config_file(PathBuf::from(path.clone())) {
+                        jobs.load_new_config(new_jobs).context("Jobs load failed")?;
+                    } else {
+                        // if the config file is invalid, we keep the old one
+                        socket.write("Invalid config file", stream)?;
+                        eprintln!("Received invalid config file: {}", path);
+                    }
                 }
             }
             response.clear();
