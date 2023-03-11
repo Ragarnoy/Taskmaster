@@ -80,6 +80,10 @@ pub fn main_loop() -> Result<()> {
                 Action::Shutdown => {
                     break;
                 }
+                Action::Load(path) => {
+                    let new_jobs: Jobs = job::load_config(&path)?;
+                    jobs.load_new_config(new_jobs).context("Jobs load failed")?;
+                }
             }
             response.clear();
         }
