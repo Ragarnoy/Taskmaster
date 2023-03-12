@@ -194,6 +194,8 @@ impl Process {
         if let State::Running { pid, status, .. } = &mut self.state {
             nix::sys::signal::kill(*pid, Signal::from(stop_signal))?;
             *status = RunningStatus::StopRequested(Instant::now());
+        } else if let State::Stopped(StoppedStatus::Backoff { .. }) = &self.state {
+            self.state = State::Stopped(StoppedStatus::Stopped);
         }
         Ok(())
     }
