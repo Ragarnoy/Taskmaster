@@ -10,7 +10,7 @@ impl Default for ExitCodes {
     }
 }
 
-/// Deserialize the ExitCodes with serde and handle both numbers and sequences of numbers
+/// Deserialize the `ExitCodes` with serde and handle both numbers and sequences of numbers
 impl<'de> Deserialize<'de> for ExitCodes {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
