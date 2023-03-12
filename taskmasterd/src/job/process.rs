@@ -121,7 +121,10 @@ impl Process {
     fn get_tries(&self) -> u32 {
         match &self.state {
             State::Stopped(StoppedStatus::Backoff { tries: t, .. }) => *t,
-            State::Running { status: RunningStatus::StartRequested { tries: t, .. }, .. } => *t,
+            State::Running {
+                status: RunningStatus::StartRequested { tries: t, .. },
+                ..
+            } => *t,
             _ => 0,
         }
     }
@@ -161,15 +164,26 @@ impl Process {
         Ok(())
     }
 
+    /// Returns the adequate `StoppedStatus` for the current state
+    fn get_stopped_status(&self) -> StoppedStatus {
+        let tries = self.get_tries();
+        if tries < self.config.startretries {
+            println!("{}: backing off", self.name);
+            StoppedStatus::Backoff {
+                tries: tries + 1,
+                started_at: Instant::now(),
+            }
+        } else {
+            println!("{}: giving up", self.name);
+            StoppedStatus::Fatal
+        }
+    }
+
     pub fn start(&mut self) {
         if let State::Stopped(_) = self.state {
             if let Err(e) = self.try_start() {
                 eprintln!("{}: failed to start: {}", self.name, e);
-                let tries = self.get_tries();
-                self.state = State::Stopped(StoppedStatus::Backoff {
-                    tries: tries + 1,
-                    started_at: Instant::now(),
-                });
+                self.state = State::Stopped(self.get_stopped_status());
             };
         } else {
             eprintln!("{}: already running", self.name);
@@ -210,20 +224,11 @@ impl Process {
                 };
                 self.state = State::Stopped(match status {
                     RunningStatus::StartRequested { tries, .. } => {
-                        print!(
+                        println!(
                             "{}: exited before being fully started ({} tries)",
                             self.name, tries
                         );
-                        if *tries < config.startretries {
-                            println!(", backing off");
-                            StoppedStatus::Backoff {
-                                tries: *tries + 1,
-                                started_at: Instant::now(),
-                            }
-                        } else {
-                            println!(", giving up");
-                            StoppedStatus::Fatal
-                        }
+                        self.get_stopped_status()
                     }
                     RunningStatus::StopRequested(_) => StoppedStatus::Stopped,
                     RunningStatus::Running => {
