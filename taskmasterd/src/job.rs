@@ -1,4 +1,4 @@
-use anyhow::{Context, Ok, Result};
+use anyhow::{Ok, Result};
 use jobconfig::JobConfig;
 use process::{Process, State};
 use serde::Deserialize;
@@ -36,13 +36,10 @@ impl Job {
         Ok(())
     }
 
-    pub fn start(&mut self, name: &str) -> Result<()> {
+    pub fn start(&mut self) {
         for process in self.processes.iter_mut() {
-            process
-                .start()
-                .with_context(|| format!("Failed to start process {}", name))?;
+            process.start();
         }
-        Ok(())
     }
 
     pub fn stop(&mut self) -> Result<()> {
@@ -72,7 +69,7 @@ impl Job {
                     process::StoppedStatus::Backoff { tries, started_at } => {
                         if started_at.elapsed().as_secs() >= (*tries).into() {
                             println!("{}: backoff expired, restart", process.name);
-                            process.start()?;
+                            process.start();
                         }
                     }
                     process::StoppedStatus::Unexpected => {
@@ -81,7 +78,7 @@ impl Job {
                             || self.config.autorestart == AutoRestart::Unexpected
                         {
                             println!("{}: unexpected exit, restart", process.name);
-                            process.start()?;
+                            process.start();
                         } else {
                             println!("{}: unexpected exit", process.name);
                         }
@@ -89,7 +86,7 @@ impl Job {
                     process::StoppedStatus::Exited => {
                         if self.config.autorestart == AutoRestart::Always {
                             println!("{}: exited, restart", process.name);
-                            process.start()?;
+                            process.start();
                         }
                     }
                     process::StoppedStatus::Fatal => {}

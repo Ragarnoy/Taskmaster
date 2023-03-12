@@ -46,17 +46,16 @@ impl Jobs {
         for (name, job) in to_add {
             self.programs.insert(name, job);
         }
-        self.auto_start()?;
+        self.auto_start();
         Ok(())
     }
 
-    pub fn auto_start(&mut self) -> Result<()> {
-        for (name, job) in self.programs.iter_mut() {
+    pub fn auto_start(&mut self) {
+        for job in self.programs.values_mut() {
             if job.config.autostart && !job.is_running() {
-                job.start(name)?;
+                job.start();
             }
         }
-        Ok(())
     }
 
     pub fn status(&self, name: &str) -> Result<String> {
@@ -86,21 +85,19 @@ impl Jobs {
         Ok(())
     }
 
-    pub fn start(&mut self, name: &str) -> Result<()> {
+    pub fn start(&mut self, name: &str) {
         if name.is_empty() {
             return self.start_all();
         }
         if let Some(job) = self.programs.get_mut(name) {
-            job.start(name)?;
+            job.start();
         }
-        Ok(())
     }
 
-    pub fn start_all(&mut self) -> Result<()> {
-        for (name, job) in self.programs.iter_mut() {
-            job.start(name)?;
+    pub fn start_all(&mut self) {
+        for job in self.programs.values_mut() {
+            job.start();
         }
-        Ok(())
     }
 
     pub fn stop(&mut self, name: &str) -> Result<()> {
@@ -150,7 +147,7 @@ impl Jobs {
         self.try_wait_job_stop()?;
         self.clear_jobs();
         *self = Jobs::new().context("Failed to load new config")?;
-        self.auto_start().context("Jobs auto-start failed")?;
+        self.auto_start();
         Ok(())
     }
 
@@ -161,7 +158,7 @@ impl Jobs {
         let new_jobs = load_config_file(path).context("Failed to load config")?;
         self.try_wait_job_stop()?;
         *self = new_jobs;
-        self.auto_start()?;
+        self.auto_start();
         Ok(())
     }
 

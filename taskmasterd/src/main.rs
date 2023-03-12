@@ -53,7 +53,7 @@ pub fn main_loop() -> Result<()> {
     let mut jobs = Jobs::new().context("Jobs creation failed")?;
     let mut response = String::new();
     let mut sleeper = Sleeper::new(100)?;
-    jobs.auto_start().context("Jobs auto-start failed")?;
+    jobs.auto_start();
     while !term.load(Ordering::Relaxed) {
         if hup.load(Ordering::Relaxed) {
             hup.store(false, Ordering::Relaxed);
@@ -62,7 +62,7 @@ pub fn main_loop() -> Result<()> {
         if let Some(stream) = socket.read(&mut response)? {
             let action = Action::from_str(&response)?;
             match action {
-                Action::Start(name) => jobs.start(&name).context("Job start failed")?,
+                Action::Start(name) => jobs.start(&name),
                 Action::Stop(name) => jobs.stop(&name).context("Job stop failed")?,
                 Action::Restart(name) => jobs.restart(&name).context("Job restart failed")?,
                 Action::Status(name) => {
