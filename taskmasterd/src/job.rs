@@ -44,7 +44,7 @@ impl Job {
 
     pub fn stop(&mut self) -> Result<()> {
         for process in self.processes.iter_mut() {
-            process.stop(self.config.stopsignal)?;
+            process.stop(self.config.stopsignal, false)?;
         }
         Ok(())
     }
@@ -93,10 +93,15 @@ impl Job {
                     process::StoppedStatus::Stopped => {}
                 },
                 State::Running { status, .. } => match status {
-                    process::RunningStatus::StopRequested(since) => {
+                    process::RunningStatus::StopRequested { since, restart } => {
                         if since.elapsed().as_secs() >= self.config.stoptimeout.0 {
                             println!("{}: stop timeout expired, kill", process.name);
+                            let restart = *restart;
                             process.kill()?;
+                            if restart {
+                                process.start();
+                                println!("{}: restarted after kill", process.name);
+                            }
                         }
                     }
                     process::RunningStatus::StartRequested { start, .. } => {
