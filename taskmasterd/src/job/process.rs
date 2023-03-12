@@ -13,7 +13,7 @@ use std::time::Instant;
 pub enum RunningStatus {
     Running,
     StartRequested { start: Instant, tries: u32 },
-    StopRequested(Instant),
+    StopRequested { since: Instant, restart: bool },
 }
 
 /// Status of a stopped process
@@ -57,8 +57,13 @@ impl Display for RunningStatus {
                 tries,
                 start.elapsed().as_secs()
             ),
-            RunningStatus::StopRequested(start) => {
-                write!(f, "STOP_REQUESTED (since: {})", start.elapsed().as_secs())
+            RunningStatus::StopRequested { since, restart } => {
+                write!(
+                    f,
+                    "STOP_REQUESTED (since: {}, restarting: {})",
+                    since.elapsed().as_secs(),
+                    restart
+                )
             }
         }
     }
@@ -190,10 +195,13 @@ impl Process {
         }
     }
 
-    pub fn stop(&mut self, stop_signal: StopSignal) -> Result<()> {
+    pub fn stop(&mut self, stop_signal: StopSignal, restart: bool) -> Result<()> {
         if let State::Running { pid, status, .. } = &mut self.state {
             nix::sys::signal::kill(*pid, Signal::from(stop_signal))?;
-            *status = RunningStatus::StopRequested(Instant::now());
+            *status = RunningStatus::StopRequested {
+                since: Instant::now(),
+                restart,
+            };
         } else if let State::Stopped(StoppedStatus::Backoff { .. }) = &self.state {
             self.state = State::Stopped(StoppedStatus::Stopped);
         }
@@ -203,15 +211,22 @@ impl Process {
     /// Kill the process
     /// This is a shortcut for `stop(StopSignal::Kill)`
     pub fn kill(&mut self) -> Result<()> {
-        self.stop(StopSignal::Kill)?;
+        self.stop(StopSignal::Kill, false)?;
         self.state = State::Stopped(StoppedStatus::Stopped);
         // not sure if that's the right way to do it
         Ok(())
     }
 
     pub fn restart(&mut self, config: &JobConfig) -> Result<()> {
-        self.stop(config.stopsignal)?;
-        self.start();
+        match &self.state {
+            State::Running { .. } => self.stop(config.stopsignal, true)?,
+            State::Stopped(status) => {
+                if let StoppedStatus::Backoff { .. } = status {
+                    self.state = State::Stopped(StoppedStatus::Stopped);
+                }
+                self.start();
+            }
+        }
         Ok(())
     }
 
@@ -232,7 +247,17 @@ impl Process {
                         );
                         self.get_stopped_status()
                     }
-                    RunningStatus::StopRequested(_) => StoppedStatus::Stopped,
+                    RunningStatus::StopRequested { restart, .. } => {
+                        if *restart {
+                            self.state = State::Stopped(StoppedStatus::Stopped);
+                            println!("{}: exited and will be restarted", self.name);
+                            self.start();
+                            return Ok(()); // sale
+                        } else {
+                            println!("{}: has been stopped", self.name);
+                            StoppedStatus::Stopped
+                        }
+                    }
                     RunningStatus::Running => {
                         if expected {
                             println!("{}: exited", self.name);
