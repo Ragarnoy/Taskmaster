@@ -18,18 +18,18 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 Once you have installed Rust, you can run the Taskmaster dæmon by running the following command:
 
-```bash
+```
 cargo run
 ```
 
 and the client by running the following command:
 
-```bash
+```
 cargo run --package taskmasterctl
 ```
 
 ## Usage
-```bash
+```
 Usage: taskmasterd [OPTIONS]
 
 Options:
@@ -38,7 +38,7 @@ Options:
   -V, --version   Print version
 ```
 
-```bash
+```
 Usage: taskmasterctl [COMMAND]
 
 Commands:
