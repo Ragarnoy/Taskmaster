@@ -55,6 +55,29 @@ Options:
   -h, --help  Print help
 ```
 
+## Configuration
+
+```yaml
+programs:
+  job_name:
+    cmd: "command"
+    numprocs: number of processes to start in parallel
+    umask: umask to apply to the process (octal value like 077)
+    workingdir: working directory for the processes
+    autostart: true/false whether to start the program on startup
+    autorestart: unexpected/always/never whether to restart the program on exit
+    exitcodes: list of exit codes that should be considered as normal
+    startretries: number of times to retry starting the program before giving up if it exits before being fully started
+    starttime: time to wait before considering the program as fully started
+    stopsignal: signal to send to the program to stop it (TERM, INT, KILL, etc.)
+    stoptime: time to wait before sending a KILL signal to the program after sending the stop signal
+    stdout: path to the file to redirect stdout to
+    stderr: path to the file to redirect stderr to
+    env: environment variables to set for the program
+```
+
+See the [example configuration file](./config.yml) for a more detailed example.
+
 ## Authors
 
 - [Tiago Lernould](https://github.com/Ragarnoy)
