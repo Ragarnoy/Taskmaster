@@ -57,5 +57,5 @@ Options:
 
 ## Authors
 
-- Tiago Lernould (@Ragarnoy)
-- Youva Gaudé (@Eviber)
+- [Tiago Lernould](https://github.com/Ragarnoy)
+- [Youva Gaudé](https://github.com/Eviber)
